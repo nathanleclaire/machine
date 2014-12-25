@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -272,6 +273,57 @@ var Commands = []cli.Command{
 			}
 			if isError {
 				log.Fatal("There was an error removing a machine. To force remove it, pass the -f option. Warning: this might leave it running on the provider.")
+			}
+		},
+	},
+	{
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "driver, d",
+				Usage: "Type of share\n\tOptions: rsync, samba, vboxsf, nfs, sshfs",
+			},
+			cli.StringFlag{
+				Name:  "src, s",
+				Usage: "Directory from the client to share",
+				Value: ".",
+			},
+			cli.StringFlag{
+				Name:  "with, w",
+				Usage: "Machine to share with (default: active)",
+			},
+		},
+		Name:  "share",
+		Usage: "Share a directory with the active machine",
+		Action: func(c *cli.Context) {
+			subcmd := c.Args().First()
+
+			// so that "machine share"
+			// will "just work"
+			if subcmd == "" {
+				subcmd = "create"
+			}
+
+			dir := c.String("src")
+			absDir, err := filepath.Abs(dir)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// only allow shares inside of the user's
+			// home directory (might add --unsafe option
+			// or something later)
+			if !strings.Contains(absDir, drivers.GetHomeDir()) {
+				log.Fatal("By default only directories inside of your home directory are allowed")
+			}
+
+			switch subcmd {
+			case "create":
+			case "rm":
+			case "push":
+			case "pull":
+			case "sync":
+			default:
+				log.Fatal("Subcommand not recognized")
 			}
 		},
 	},
