@@ -1,6 +1,9 @@
 package share
 
-import "github.com/codegangsta/cli"
+import (
+	machinedrivers "github.com/docker/machine/drivers"
+	"github.com/docker/machine/share/drivers"
+)
 
 type ShareDriver interface {
 	// In order to mount a share, a "contract" must be fulfilled.
@@ -9,7 +12,7 @@ type ShareDriver interface {
 	// be running using the VirtualBox driver), to use a rsync share
 	// the rsync binary must be present on the guest _and_ the host,
 	// and so on.
-	ContractFulfilled() (bool, ContractFailure, error)
+	ContractFulfilled() (bool, drivers.ContractFailure, error)
 	Create() error
 	Remove() error
 	DriverName() string
@@ -25,12 +28,14 @@ type ShareDriver interface {
 	Provision() error
 }
 
-type RegisteredShareDriver struct {
-	New            func(storePath string) (Driver, error)
-	GetCreateFlags func() []cli.Flag
+func ListShares() error {
+	return nil
 }
 
-type Share interface {
-	LocalPath() string
-	RemotePath() string
+func GetShare(localDir string, d machinedrivers.Driver) (ShareDriver, error) {
+	return drivers.Rsync{}, nil
+}
+
+func NewShare(localDir string, driverType string) error {
+	return nil
 }

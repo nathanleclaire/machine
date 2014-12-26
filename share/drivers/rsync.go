@@ -1,53 +1,63 @@
-package rsync
+package drivers
 
 import (
-	_ "github.com/docker/machine/share"
+	machinedrivers "github.com/docker/machine/drivers"
 )
 
-func ContractFulfilled() (bool, ContractFailure, error) {
+type Rsync struct {
+	LocalDir  string
+	RemoteDir string
+	Machine   *machinedrivers.Driver
+}
+
+func (r Rsync) DriverName() string {
+	return "rsync"
+}
+
+func (r Rsync) ContractFulfilled() (bool, ContractFailure, error) {
 	return false, RsyncMissingLocally, nil
 }
 
-func Create() error {
+func (r Rsync) Create() error {
 	return nil
 }
 
-func Remove() error {
+func (r Rsync) Remove() error {
 	return nil
 }
 
-func Type() string {
+func (r Rsync) Type() string {
 	return ""
 }
 
-func Push() error {
+func (r Rsync) Push() error {
 	return nil
 }
 
-func Pull() error {
+func (r Rsync) Pull() error {
 	return nil
 }
 
-func Sync() error {
+func (r Rsync) Sync() error {
 	return nil
 }
 
-func OnHostStart() error {
+func (r Rsync) OnHostStart() error {
 	return nil
 }
 
-func OnHostStop() error {
+func (r Rsync) OnHostStop() error {
 	return nil
 }
 
-func OnHostRestart() error {
+func (r Rsync) OnHostRestart() error {
 	return nil
 }
 
-func OnHostKill() error {
+func (r Rsync) OnHostKill() error {
 	return nil
 }
 
-func Provision() error {
+func (r Rsync) Provision() error {
 	return nil
 }

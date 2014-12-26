@@ -20,6 +20,7 @@ import (
 	_ "github.com/docker/machine/drivers/digitalocean"
 	_ "github.com/docker/machine/drivers/none"
 	_ "github.com/docker/machine/drivers/virtualbox"
+	"github.com/docker/machine/share"
 	"github.com/docker/machine/state"
 )
 
@@ -283,13 +284,17 @@ var Commands = []cli.Command{
 				Usage: "Type of share\n\tOptions: rsync, samba, vboxsf, nfs, sshfs",
 			},
 			cli.StringFlag{
-				Name:  "src, s",
+				Name:  "local-path, l",
 				Usage: "Directory from the client to share",
 				Value: ".",
 			},
 			cli.StringFlag{
-				Name:  "with, w",
+				Name:  "machine, m",
 				Usage: "Machine to share with (default: active)",
+			},
+			cli.StringFlag{
+				Name:  "remote-path, r",
+				Usage: "Directory to share to on the machine (default: same as local-path)",
 			},
 		},
 		Name:  "share",
@@ -303,8 +308,8 @@ var Commands = []cli.Command{
 				subcmd = "create"
 			}
 
-			dir := c.String("src")
-			absDir, err := filepath.Abs(dir)
+			localDir := c.String("local-path")
+			absDir, err := filepath.Abs(localDir)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -316,12 +321,53 @@ var Commands = []cli.Command{
 				log.Fatal("By default only directories inside of your home directory are allowed")
 			}
 
+			store := NewStore()
+			host, err := store.GetActive()
+			if err != nil {
+				log.Fatalf("error getting active host: %v", err)
+			}
+
 			switch subcmd {
+			case "ls":
+				if err := share.ListShares(); err != nil {
+					log.Fatal(err)
+				}
 			case "create":
+				if err := share.NewShare(localDir, c.String("driver")); err != nil {
+					log.Fatal(err)
+				}
 			case "rm":
+				activeShare, err := share.GetShare(localDir, host.Driver)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if err := activeShare.Remove(); err != nil {
+					log.Fatal(err)
+				}
 			case "push":
+				activeShare, err := share.GetShare(localDir, host.Driver)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if err := activeShare.Push(); err != nil {
+					log.Fatal(err)
+				}
 			case "pull":
+				activeShare, err := share.GetShare(localDir, host.Driver)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if err := activeShare.Pull(); err != nil {
+					log.Fatal(err)
+				}
 			case "sync":
+				activeShare, err := share.GetShare(localDir, host.Driver)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if err := activeShare.Sync(); err != nil {
+					log.Fatal(err)
+				}
 			default:
 				log.Fatal("Subcommand not recognized")
 			}

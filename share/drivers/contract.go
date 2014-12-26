@@ -1,9 +1,9 @@
-package share
+package drivers
 
 type ContractFailure int
 
 const (
-	None state = iota
+	None ContractFailure = iota
 	MachineDriverNotEligible
 	RsyncMissingLocally
 	RsyncMissingOnRemote
