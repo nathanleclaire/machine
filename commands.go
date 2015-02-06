@@ -13,6 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 
+	"github.com/docker/machine/config"
 	"github.com/docker/machine/drivers"
 	_ "github.com/docker/machine/drivers/amazonec2"
 	_ "github.com/docker/machine/drivers/azure"
@@ -31,7 +32,7 @@ import (
 	"github.com/docker/machine/utils"
 )
 
-type machineConfig struct {
+type machineConnectionInfo struct {
 	caCertPath     string
 	clientCertPath string
 	clientKeyPath  string
@@ -141,8 +142,19 @@ var Commands = []cli.Command{
 		Action: cmdCreate,
 	},
 	{
+		Name:   "conn",
+		Usage:  "Print the Docker connection flags for machine",
+		Action: cmdConn,
+	},
+	{
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "global, g",
+				Usage: "Apply settings globally as opposed to at the project (local) level",
+			},
+		},
 		Name:   "config",
-		Usage:  "Print the connection config for machine",
+		Usage:  "Configure machine variables",
 		Action: cmdConfig,
 	},
 	{
@@ -271,17 +283,44 @@ func cmdCreate(c *cli.Context) {
 		log.Fatalf("error setting active host: %v", err)
 	}
 
-	log.Infof("%q has been created and is now the active machine.", name)
-	log.Infof("To point your Docker client at it, run this in your shell: $(%s env %s)", c.App.Name, name)
+	log.Infof("%q has been created and is now the active machine", name)
+	log.Infof("Set connection information for docker client with: $(%s env %s)", c.App.Name, name)
 }
 
-func cmdConfig(c *cli.Context) {
-	cfg, err := getMachineConfig(c)
+func cmdConn(c *cli.Context) {
+	cfg, err := getMachineConnectionInfo(c)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("--tls --tlscacert=%s --tlscert=%s --tlskey=%s -H=%q",
 		cfg.caCertPath, cfg.clientCertPath, cfg.clientKeyPath, cfg.machineUrl)
+}
+
+func cmdConfig(c *cli.Context) {
+	if c.String("global") == "" {
+		log.Fatal("Local settings are not yet supported.  Please use the --global flag.")
+	}
+	if len(c.Args()) == 0 {
+		log.Fatal("Please enter a config value to get or set.")
+	}
+	configStore, err := config.NewClientConfigStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+	key := c.Args().First()
+	if len(c.Args()) == 1 {
+		val, err := configStore.GetString(key)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Info(val)
+		}
+	} else {
+		configStore.Set(key, c.Args()[1])
+		if err := configStore.Save(); err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func cmdInspect(c *cli.Context) {
@@ -394,7 +433,7 @@ func cmdRm(c *cli.Context) {
 }
 
 func cmdEnv(c *cli.Context) {
-	cfg, err := getMachineConfig(c)
+	cfg, err := getMachineConnectionInfo(c)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -531,7 +570,7 @@ func getHostState(host Host, store Store, hostListItems chan<- hostListItem) {
 	}
 }
 
-func getMachineConfig(c *cli.Context) (*machineConfig, error) {
+func getMachineConnectionInfo(c *cli.Context) (*machineConnectionInfo, error) {
 	name := c.Args().First()
 	store := NewStore(c.GlobalString("storage-path"), c.GlobalString("tls-ca-cert"), c.GlobalString("tls-ca-key"))
 	var machine *Host
@@ -548,7 +587,7 @@ func getMachineConfig(c *cli.Context) (*machineConfig, error) {
 	} else {
 		m, err := store.Load(name)
 		if err != nil {
-			return nil, fmt.Errorf("Error loading machine config: %s", err)
+			return nil, fmt.Errorf("Error loading machine connection info: %s", err)
 		}
 		machine = m
 	}
@@ -564,7 +603,7 @@ func getMachineConfig(c *cli.Context) (*machineConfig, error) {
 			return nil, fmt.Errorf("Unexpected error getting machine url: %s", err)
 		}
 	}
-	return &machineConfig{
+	return &machineConnectionInfo{
 		caCertPath:     caCert,
 		clientCertPath: clientCert,
 		clientKeyPath:  clientKey,
