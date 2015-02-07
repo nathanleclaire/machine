@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -38,13 +39,16 @@ func NewClientConfigStore() (ClientConfigStore, error) {
 		configFilePath: filepath.Join(utils.GetDockerDir(), clientConfigFile),
 		configValues: map[string]interface{}{
 			"Core": map[string]interface{}{
-				"Debug":         true,
+				"Debug":         "false",
 				"StoragePath":   filepath.Join(utils.GetMachineDir()),
 				"TlsCaCert":     filepath.Join(utils.GetMachineDir(), "ca.pem"),
 				"TlsCaKey":      filepath.Join(utils.GetMachineDir(), "key.pem"),
 				"TlsClientCert": filepath.Join(utils.GetMachineClientCertDir(), "cert.pem"),
 				"TlsClientKey":  filepath.Join(utils.GetMachineClientCertDir(), "key.pem"),
 			},
+			// TODO: This type is ugly, but I can't think of a way to implement it that isn't.
+			//       We could use a struct and reflection, but in considering that it seems more trouble
+			//       than it's worth.
 			"Drivers": map[string]map[string]interface{}{
 				"DigitalOcean": map[string]interface{}{
 					"AccessToken": "",
@@ -72,16 +76,14 @@ func (c *ClientConfigStore) Load() error {
 			log.Fatalf("Unrecognized error reading %s: %s", c.configFilePath, err)
 		}
 	}
-	if json.Unmarshal(data, c); err != nil {
+	if json.Unmarshal(data, &c.configValues); err != nil {
 		log.Fatalf("Error unmarshalling %s: %s", c.configFilePath, err)
 	}
 	return nil
 }
 
 func (c *ClientConfigStore) Save() error {
-	log.Info("Saving file!")
-	log.Info(c)
-	b, err := json.MarshalIndent(c.configValues, "", "\t")
+	b, err := json.MarshalIndent(c.configValues, "", "    ")
 	if err != nil {
 		return err
 	}
@@ -101,17 +103,26 @@ func (e ErrKeyNotFound) Error() string {
 }
 
 type ErrInvalidType struct {
-	key string
+	key             string
+	conversionError error
 }
 
 func (e ErrInvalidType) Error() string {
-	return fmt.Sprintf("Invalid type for attempted key access at key: %s", e.key)
+	return fmt.Sprintf("Invalid type for attempted key access at key: %s\nError: %s", e.key, e.conversionError)
+}
+
+type ErrKeyNotSupported struct {
+	key string
+}
+
+func (e ErrKeyNotSupported) Error() string {
+	return fmt.Sprintf("Tried to set a key which is not supported: %s", e.key)
 }
 
 func (c *ClientConfigStore) get(key string) (interface{}, error) {
 	var (
-		ok  bool
 		val interface{}
+		ok  bool
 	)
 	nestedVal := c.configValues
 	keys := strings.Split(key, ".")
@@ -131,52 +142,46 @@ func (c *ClientConfigStore) get(key string) (interface{}, error) {
 	return val, nil
 }
 
-func (c *ClientConfigStore) GetBool(key string) (bool, error) {
-	var (
-		assertedVal bool
-		ok          bool
-	)
-	val, err := c.get(key)
-	if err != nil {
-		return false, err
-	}
-	assertedVal, ok = val.(bool)
-	if !ok {
-		return false, ErrInvalidType{key: key}
-	}
-	return assertedVal, nil
-}
-
 func (c *ClientConfigStore) GetString(key string) (string, error) {
-	var (
-		assertedVal string
-		ok          bool
-	)
 	val, err := c.get(key)
 	if err != nil {
 		return "", err
 	}
-	assertedVal, ok = val.(string)
+	assertedVal, ok := val.(string)
 	if !ok {
 		return "", ErrInvalidType{key: key}
 	}
 	return assertedVal, nil
 }
 
-func (c *ClientConfigStore) GetInt(key string) (int, error) {
-	var (
-		assertedVal int
-		ok          bool
-	)
-	val, err := c.get(key)
+func (c *ClientConfigStore) GetBool(key string) (bool, error) {
+	val, err := c.GetString(key)
+	if err != nil {
+		return false, err
+	}
+	convertedVal, err := strconv.ParseBool(val)
+	if err != nil {
+		return false, ErrInvalidType{
+			key:             key,
+			conversionError: err,
+		}
+	}
+	return convertedVal, nil
+}
+
+func (c *ClientConfigStore) GetInt(key string) (int64, error) {
+	val, err := c.GetString(key)
 	if err != nil {
 		return 0, err
 	}
-	assertedVal, ok = val.(int)
-	if !ok {
-		return 0, ErrInvalidType{key: key}
+	convertedVal, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return 0, ErrInvalidType{
+			key:             key,
+			conversionError: err,
+		}
 	}
-	return assertedVal, nil
+	return convertedVal, nil
 }
 
 func (c *ClientConfigStore) Set(key string, value interface{}) error {
@@ -185,11 +190,17 @@ func (c *ClientConfigStore) Set(key string, value interface{}) error {
 		ok        bool
 	)
 	keys := strings.Split(key, ".")
-	nestedVal = c.configValues[keys[0]].(map[string]interface{})
+	nestedVal = c.configValues
 	for i, nestedKey := range keys {
 		// on last element of array, set the value
 		// for that key
 		if i+1 == len(keys) {
+			// Check for existence of key.
+			// All supported keys should be present by default.
+			_, ok = nestedVal[nestedKey]
+			if !ok {
+				return ErrKeyNotSupported{key: key}
+			}
 			nestedVal[nestedKey] = value
 			// done
 			return nil
@@ -198,7 +209,6 @@ func (c *ClientConfigStore) Set(key string, value interface{}) error {
 		if !ok {
 			return ErrKeyNotFound{key: key}
 		}
-		fmt.Println(nestedVal)
 	}
 	return ErrKeyNotFound{key: key}
 }

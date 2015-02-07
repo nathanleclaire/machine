@@ -313,10 +313,12 @@ func cmdConfig(c *cli.Context) {
 		if err != nil {
 			log.Fatal(err)
 		} else {
-			log.Info(val)
+			fmt.Println(val)
 		}
 	} else {
-		configStore.Set(key, c.Args()[1])
+		if err := configStore.Set(key, c.Args()[1]); err != nil {
+			log.Fatal(err)
+		}
 		if err := configStore.Save(); err != nil {
 			log.Fatal(err)
 		}
