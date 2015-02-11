@@ -7,12 +7,23 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	"github.com/docker/machine/config"
 	"github.com/docker/machine/utils"
 )
 
 func main() {
+	configStore, err := config.NewClientConfigStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	configDebug, err := configStore.GetBool("Core.Debug")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for _, f := range os.Args {
-		if f == "-D" || f == "--debug" || f == "-debug" {
+		if f == "-D" || f == "--debug" || f == "-debug" || configDebug {
 			os.Setenv("DEBUG", "1")
 			initLogging(log.DebugLevel)
 		}

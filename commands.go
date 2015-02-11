@@ -134,7 +134,7 @@ var Commands = []cli.Command{
 					"Driver to create machine with. Available drivers: %s",
 					strings.Join(drivers.GetDriverNames(), ", "),
 				),
-				Value: "none",
+				Value: "",
 			},
 		),
 		Name:   "create",
@@ -259,6 +259,17 @@ func cmdActive(c *cli.Context) {
 
 func cmdCreate(c *cli.Context) {
 	driver := c.String("driver")
+	if driver == "" {
+		configStore, err := config.NewClientConfigStore()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		driver, err = configStore.GetString("Create.Driver")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	name := c.Args().First()
 
 	if name == "" {
@@ -297,7 +308,7 @@ func cmdConn(c *cli.Context) {
 }
 
 func cmdConfig(c *cli.Context) {
-	if c.String("global") == "" {
+	if !c.Bool("global") {
 		log.Fatal("Local settings are not yet supported.  Please use the --global flag.")
 	}
 	if len(c.Args()) == 0 {
@@ -316,7 +327,7 @@ func cmdConfig(c *cli.Context) {
 			fmt.Println(val)
 		}
 	} else {
-		if err := configStore.Set(key, c.Args()[1]); err != nil {
+		if err := configStore.SetString(key, c.Args()[1]); err != nil {
 			log.Fatal(err)
 		}
 		if err := configStore.Save(); err != nil {

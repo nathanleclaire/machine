@@ -17,9 +17,23 @@ const (
 	clientConfigFile = "machine-client-config.json"
 )
 
-type Config interface {
-	Load(file string) error
+type ConfigStore interface {
+	// Load is expected to bring the configuration values
+	// from wherever they are stored
+	// into the currently existing struct.
+	Load() error
+
+	// Save is expected to persist the mutated values from
+	// the struct to wherever they are persisted.
 	Save() error
+
+	// GetString() is called to get the current configuration value
+	// for the specified key, e.g. "Core.Debug".
+	GetString(key string) (string, error)
+
+	// SetString() is called to set the current configuration value
+	// for the specified key, e.g. configStore.SetString('Core.Debug', 'true')
+	SetString(key, value string) error
 }
 
 type ConfigHierarchy struct {
@@ -45,6 +59,9 @@ func NewClientConfigStore() (ClientConfigStore, error) {
 				"TlsCaKey":      filepath.Join(utils.GetMachineDir(), "key.pem"),
 				"TlsClientCert": filepath.Join(utils.GetMachineClientCertDir(), "cert.pem"),
 				"TlsClientKey":  filepath.Join(utils.GetMachineClientCertDir(), "key.pem"),
+			},
+			"Create": map[string]interface{}{
+				"Driver": "none",
 			},
 			// TODO: This type is ugly, but I can't think of a way to implement it that isn't.
 			//       We could use a struct and reflection, but in considering that it seems more trouble
@@ -108,7 +125,11 @@ type ErrInvalidType struct {
 }
 
 func (e ErrInvalidType) Error() string {
-	return fmt.Sprintf("Invalid type for attempted key access at key: %s\nError: %s", e.key, e.conversionError)
+	msg := fmt.Sprintf("Invalid type for attempted access at key: %q.", e.key)
+	if e.conversionError != nil {
+		msg = fmt.Sprintf("%s Conversion Error: %s", msg, e.conversionError)
+	}
+	return msg
 }
 
 type ErrKeyNotSupported struct {
@@ -149,7 +170,10 @@ func (c *ClientConfigStore) GetString(key string) (string, error) {
 	}
 	assertedVal, ok := val.(string)
 	if !ok {
-		return "", ErrInvalidType{key: key}
+		return "", ErrInvalidType{
+			key:             key,
+			conversionError: fmt.Errorf("Type assertion to string not ok"),
+		}
 	}
 	return assertedVal, nil
 }
@@ -184,7 +208,7 @@ func (c *ClientConfigStore) GetInt(key string) (int64, error) {
 	return convertedVal, nil
 }
 
-func (c *ClientConfigStore) Set(key string, value interface{}) error {
+func (c *ClientConfigStore) SetString(key string, value interface{}) error {
 	var (
 		nestedVal map[string]interface{}
 		ok        bool

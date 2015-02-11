@@ -12,6 +12,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	// "github.com/docker/docker/utils"
+	"github.com/docker/machine/config"
 	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/ssh"
 	"github.com/docker/machine/state"
@@ -83,7 +84,21 @@ func (d *Driver) DriverName() string {
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
-	d.AccessToken = flags.String("digitalocean-access-token")
+	cs, err := config.NewClientConfigStore()
+	if err != nil {
+		return err
+	}
+
+	accessToken, err := cs.GetString("Drivers.DigitalOcean.AccessToken")
+	if err != nil {
+		return err
+	}
+
+	if flags.String("digitalocean-access-token") == "" {
+		d.AccessToken = accessToken
+	} else {
+		d.AccessToken = flags.String("digitalocean-access-token")
+	}
 	d.Image = flags.String("digitalocean-image")
 	d.Region = flags.String("digitalocean-region")
 	d.Size = flags.String("digitalocean-size")
