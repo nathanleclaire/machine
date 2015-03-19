@@ -95,10 +95,6 @@ func (h *Host) Create(name string) error {
 		return err
 	}
 
-	utils.DumpVal(provisioner)
-	utils.DumpVal("swarmConfig", h.SwarmConfig)
-	utils.DumpVal("authConfig", h.AuthConfig)
-
 	if err := provisioner.Provision(h.SwarmConfig, h.AuthConfig); err != nil {
 		return err
 	}

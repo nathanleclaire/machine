@@ -10,7 +10,6 @@ import (
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/provision/pkgaction"
 	"github.com/docker/machine/libmachine/swarm"
-	"github.com/docker/machine/utils"
 )
 
 func init() {
@@ -76,7 +75,6 @@ func (provisioner *Boot2DockerProvisioner) SetHostname(hostname string) error {
 		hostname,
 		hostname,
 	))
-	utils.DumpVal(cmd)
 	if err != nil {
 		return err
 	}
