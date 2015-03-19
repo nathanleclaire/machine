@@ -97,7 +97,7 @@ func (provisioner *Boot2DockerProvisioner) GenerateDockerConfig(dockerPort int, 
 CACERT=%s
 SERVERCERT=%s
 SERVERKEY=%s
-DOCKER_TLS=no`, opts, authConfig.CaCertPath, authConfig.ServerKeyPath, authConfig.ServerCertPath)
+DOCKER_TLS=no`, opts, authConfig.CaCertRemotePath, authConfig.ServerKeyRemotePath, authConfig.ServerCertRemotePath)
 	return &DockerConfig{
 		EngineConfig:     daemonCfg,
 		EngineConfigPath: daemonOptsCfg,

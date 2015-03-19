@@ -121,18 +121,21 @@ func ConfigureAuth(p Provisioner, authConfig auth.AuthOptions) error {
 	// due to windows clients, we cannot use filepath.Join as the paths
 	// will be mucked on the linux hosts
 	machineCaCertPath := path.Join(dockerDir, "ca.pem")
+	authConfig.CaCertRemotePath = machineCaCertPath
 
 	serverCert, err := ioutil.ReadFile(authConfig.ServerCertPath)
 	if err != nil {
 		return err
 	}
 	machineServerCertPath := path.Join(dockerDir, "server.pem")
+	authConfig.ServerCertRemotePath = machineServerCertPath
 
 	serverKey, err := ioutil.ReadFile(authConfig.ServerKeyPath)
 	if err != nil {
 		return err
 	}
 	machineServerKeyPath := path.Join(dockerDir, "server-key.pem")
+	authConfig.ServerKeyRemotePath = machineServerKeyPath
 
 	cmd, err = p.SSHCommand(fmt.Sprintf("echo \"%s\" | sudo tee %s", string(caCert), machineCaCertPath))
 	if err != nil {
@@ -198,9 +201,9 @@ func ConfigureAuth(p Provisioner, authConfig auth.AuthOptions) error {
 
 func getDefaultDaemonOpts(driverName string, authConfig auth.AuthOptions) string {
 	return fmt.Sprintf(`--tlsverify --tlscacert=%s --tlskey=%s --tlscert=%s %s`,
-		authConfig.CaCertPath,
-		authConfig.ServerKeyPath,
-		authConfig.ServerCertPath,
+		authConfig.CaCertRemotePath,
+		authConfig.ServerKeyRemotePath,
+		authConfig.ServerCertRemotePath,
 		fmt.Sprintf("--label=provider=%s", driverName),
 	)
 }

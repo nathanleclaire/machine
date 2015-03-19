@@ -1,10 +1,13 @@
 package auth
 
 type AuthOptions struct {
-	StorePath      string
-	CaCertPath     string
-	ServerCertPath string
-	ServerKeyPath  string
-	PrivateKeyPath string
-	ClientCertPath string
+	StorePath            string
+	CaCertPath           string
+	CaCertRemotePath     string
+	ServerCertPath       string
+	ServerKeyPath        string
+	ServerCertRemotePath string
+	ServerKeyRemotePath  string
+	PrivateKeyPath       string
+	ClientCertPath       string
 }
