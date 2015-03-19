@@ -25,7 +25,7 @@ type DockerConfig struct {
 func installDockerGeneric(p Provisioner) error {
 	// install docker - until cloudinit we use ubuntu everywhere so we
 	// just install it using the docker repos
-	cmd, err := p.SSHCommand("if [ ! -e /usr/bin/docker && ! -e /usr/local/bin/docker ]; then curl -sSL https://get.docker.com | sh -; fi")
+	cmd, err := p.SSHCommand("if ! type docker; then curl -sSL https://get.docker.com | sh -; fi")
 	if err != nil {
 		return err
 	}
