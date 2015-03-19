@@ -50,7 +50,6 @@ func (s *Store) Create(name string, driverName string, flags drivers.DriverOptio
 		Discovery: flags.String("swarm-discovery"),
 		Master:    flags.Bool("swarm-master"),
 		Host:      flags.String("swarm-host"),
-		Addr:      flags.String("swarm-addr"),
 	}
 	authConfig := auth.AuthOptions{
 		StorePath:      hostPath,

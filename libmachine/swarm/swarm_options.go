@@ -10,5 +10,4 @@ type SwarmOptions struct {
 	Discovery string
 	Master    bool
 	Host      string
-	Addr      string
 }

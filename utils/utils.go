@@ -100,13 +100,14 @@ func WaitFor(f func() bool) error {
 	return WaitForSpecific(f, 60, 3*time.Second)
 }
 
-func WaitForDocker(addr string) error {
+func WaitForDocker(ip string, daemonPort int) error {
 	return WaitFor(func() bool {
-		conn, err := net.Dial("tcp", addr)
-		defer conn.Close()
+		conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", ip, daemonPort))
 		if err != nil {
+			fmt.Println("Got an error it was", err)
 			return false
 		}
+		conn.Close()
 		return true
 	})
 }

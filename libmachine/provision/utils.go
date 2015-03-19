@@ -214,13 +214,17 @@ func configureSwarm(p Provisioner, swarmConfig swarm.SwarmOptions) error {
 	}
 
 	basePath := p.GetDockerConfigDir()
+	ip, err := p.GetDriver().GetIP()
+	if err != nil {
+		return err
+	}
 
 	tlsCaCert := path.Join(basePath, "ca.pem")
 	tlsCert := path.Join(basePath, "server.pem")
 	tlsKey := path.Join(basePath, "server-key.pem")
 	masterArgs := fmt.Sprintf("--tlsverify --tlscacert=%s --tlscert=%s --tlskey=%s -H %s %s",
 		tlsCaCert, tlsCert, tlsKey, swarmConfig.Host, swarmConfig.Discovery)
-	nodeArgs := fmt.Sprintf("--addr %s %s", swarmConfig.Addr, swarmConfig.Discovery)
+	nodeArgs := fmt.Sprintf("--addr %s:2376 %s", ip, swarmConfig.Discovery)
 
 	u, err := url.Parse(swarmConfig.Host)
 	if err != nil {
@@ -230,7 +234,8 @@ func configureSwarm(p Provisioner, swarmConfig swarm.SwarmOptions) error {
 	parts := strings.Split(u.Host, ":")
 	port := parts[1]
 
-	if err := utils.WaitForDocker(swarmConfig.Addr); err != nil {
+	// TODO: Do not hardcode daemon port, ask the driver
+	if err := utils.WaitForDocker(ip, 2376); err != nil {
 		return err
 	}
 
