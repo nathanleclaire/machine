@@ -4,17 +4,23 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+
+	"github.com/docker/machine/drivers"
+	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/provision/pkgaction"
+	"github.com/docker/machine/libmachine/swarm"
 )
 
 var provisioners = make(map[string]*RegisteredProvisioner)
 
 // Distribution specific actions
 type Provisioner interface {
-	// Perform action on a named service
-	Service(name string, action ServiceState) error
+	GenerateDockerConfig(dockerPort int, authConfig auth.AuthOptions) (*DockerConfig, error)
 
-	// Ensure a package state
-	Package(name string, action PackageState) error
+	GetDockerConfigDir() string
+
+	// Run a package action
+	Package(name string, action pkgaction.PackageAction) error
 
 	// Hostname
 	Hostname() (string, error)
@@ -25,6 +31,15 @@ type Provisioner interface {
 	// Detection function
 	CompatibleWithHost() bool
 
+	Provision(swarmConfig swarm.SwarmOptions, authConfig auth.AuthOptions) error
+
+	// Perform action on a named service
+	Service(name string, action pkgaction.ServiceAction) error
+
+	GetDriver() drivers.Driver
+
+	SSHCommand(args ...string) (*exec.Cmd, error)
+
 	// Set the OS Release info depending on how it's represented
 	// internally
 	SetOsReleaseInfo(info *OsRelease)
@@ -32,20 +47,18 @@ type Provisioner interface {
 
 // Detection
 type RegisteredProvisioner struct {
-	New func(SSHCommandFunc) Provisioner
+	New func(d drivers.Driver) Provisioner
 }
-
-type SSHCommandFunc func(args ...string) (*exec.Cmd, error)
 
 func Register(name string, p *RegisteredProvisioner) {
 	provisioners[name] = p
 }
 
-func DetectProvisioner(sshCommand SSHCommandFunc) (*Provisioner, error) {
+func DetectProvisioner(d drivers.Driver) (Provisioner, error) {
 	var (
 		osReleaseOut bytes.Buffer
 	)
-	catOsReleaseCmd, err := sshCommand("cat /etc/os-release")
+	catOsReleaseCmd, err := drivers.GetSSHCommandFromDriver(d, "cat /etc/os-release")
 	if err != nil {
 		return nil, fmt.Errorf("Error getting SSH command: %s", err)
 	}
@@ -65,11 +78,11 @@ func DetectProvisioner(sshCommand SSHCommandFunc) (*Provisioner, error) {
 	}
 
 	for _, p := range provisioners {
-		provisioner := p.New(sshCommand)
+		provisioner := p.New(d)
 		provisioner.SetOsReleaseInfo(osReleaseInfo)
 
 		if provisioner.CompatibleWithHost() {
-			return &provisioner, nil
+			return provisioner, nil
 		}
 	}
 

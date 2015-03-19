@@ -3,6 +3,12 @@ package provision
 import (
 	"bytes"
 	"fmt"
+	"os/exec"
+
+	"github.com/docker/machine/drivers"
+	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/provision/pkgaction"
+	"github.com/docker/machine/libmachine/swarm"
 )
 
 func init() {
@@ -11,19 +17,24 @@ func init() {
 	})
 }
 
-func NewUbuntuProvisioner(sshFunc SSHCommandFunc) Provisioner {
+func NewUbuntuProvisioner(d drivers.Driver) Provisioner {
 	return &UbuntuProvisioner{
-		SSHCommand: sshFunc,
+		packages: []string{
+			"curl",
+		},
+		Driver: d,
 	}
 }
 
 type UbuntuProvisioner struct {
+	packages      []string
 	OsReleaseInfo *OsRelease
-	SSHCommand    SSHCommandFunc
+	Driver        drivers.Driver
+	SwarmConfig   swarm.SwarmOptions
 }
 
-func (provisioner *UbuntuProvisioner) Service(name string, action ServiceState) error {
-	command := fmt.Sprintf("service %s %s", name, action.String())
+func (provisioner *UbuntuProvisioner) Service(name string, action pkgaction.ServiceAction) error {
+	command := fmt.Sprintf("sudo service %s %s", name, action.String())
 
 	cmd, err := provisioner.SSHCommand(command)
 	if err != nil {
@@ -37,17 +48,17 @@ func (provisioner *UbuntuProvisioner) Service(name string, action ServiceState) 
 	return nil
 }
 
-func (provisioner *UbuntuProvisioner) Package(name string, action PackageState) error {
-	var packageState string
+func (provisioner *UbuntuProvisioner) Package(name string, action pkgaction.PackageAction) error {
+	var packageAction string
 
 	switch action {
-	case Installed:
-		packageState = "install"
-	case Missing:
-		packageState = "remove"
+	case pkgaction.Install:
+		packageAction = "install"
+	case pkgaction.Remove:
+		packageAction = "remove"
 	}
 
-	command := fmt.Sprintf("DEBIAN_FRONTEND=noninteractive sudo -E apt-get %s -y  %s", packageState, name)
+	command := fmt.Sprintf("DEBIAN_FRONTEND=noninteractive sudo -E apt-get %s -y  %s", packageAction, name)
 
 	cmd, err := provisioner.SSHCommand(command)
 	if err != nil {
@@ -55,6 +66,32 @@ func (provisioner *UbuntuProvisioner) Package(name string, action PackageState) 
 	}
 
 	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (provisioner *UbuntuProvisioner) Provision(swarmConfig swarm.SwarmOptions, authConfig auth.AuthOptions) error {
+	if err := provisioner.SetHostname(provisioner.Driver.GetMachineName()); err != nil {
+		return err
+	}
+
+	for _, pkg := range provisioner.packages {
+		if err := provisioner.Package(pkg, pkgaction.Install); err != nil {
+			return err
+		}
+	}
+
+	if err := installDockerGeneric(provisioner); err != nil {
+		return err
+	}
+
+	if err := ConfigureAuth(provisioner, authConfig); err != nil {
+		return err
+	}
+
+	if err := configureSwarm(provisioner, swarmConfig); err != nil {
 		return err
 	}
 
@@ -79,16 +116,25 @@ func (provisioner *UbuntuProvisioner) Hostname() (string, error) {
 
 func (provisioner *UbuntuProvisioner) SetHostname(hostname string) error {
 	cmd, err := provisioner.SSHCommand(fmt.Sprintf(
-		"sudo hostname %s && echo \"%s\" | sudo tee /etc/hostname && echo \"127.0.0.1 %s\" | sudo tee -a /etc/hosts",
+		"sudo hostname %s && echo %q | sudo tee /etc/hostname && echo \"127.0.0.1 %s\" | sudo tee -a /etc/hosts",
 		hostname,
 		hostname,
 		hostname,
 	))
+
 	if err != nil {
 		return err
 	}
 
 	return cmd.Run()
+}
+
+func (provisioner *UbuntuProvisioner) GetDockerConfigDir() string {
+	return "/etc/docker"
+}
+
+func (provisioner *UbuntuProvisioner) SSHCommand(args ...string) (*exec.Cmd, error) {
+	return drivers.GetSSHCommandFromDriver(provisioner.Driver, args...)
 }
 
 func (provisioner *UbuntuProvisioner) CompatibleWithHost() bool {
@@ -97,4 +143,20 @@ func (provisioner *UbuntuProvisioner) CompatibleWithHost() bool {
 
 func (provisioner *UbuntuProvisioner) SetOsReleaseInfo(info *OsRelease) {
 	provisioner.OsReleaseInfo = info
+}
+
+func (provisioner *UbuntuProvisioner) GenerateDockerConfig(dockerPort int, authConfig auth.AuthOptions) (*DockerConfig, error) {
+	defaultDaemonOpts := getDefaultDaemonOpts(provisioner.Driver.DriverName(), authConfig)
+	daemonOpts := fmt.Sprintf("--host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:%d", dockerPort)
+	daemonOptsCfg := "/etc/default/docker"
+	opts := fmt.Sprintf("%s %s", defaultDaemonOpts, daemonOpts)
+	daemonCfg := fmt.Sprintf("export DOCKER_OPTS=\\\"%s\\\"", opts)
+	return &DockerConfig{
+		EngineConfig:     daemonCfg,
+		EngineConfigPath: daemonOptsCfg,
+	}, nil
+}
+
+func (provisioner *UbuntuProvisioner) GetDriver() drivers.Driver {
+	return provisioner.Driver
 }

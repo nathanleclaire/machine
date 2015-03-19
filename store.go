@@ -9,6 +9,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/machine/drivers"
+	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/swarm"
 	"github.com/docker/machine/utils"
 )
 
@@ -43,7 +45,19 @@ func (s *Store) Create(name string, driverName string, flags drivers.DriverOptio
 
 	hostPath := filepath.Join(s.Path, name)
 
-	host, err := NewHost(name, driverName, hostPath, s.CaCertPath, s.PrivateKeyPath, flags.Bool("swarm-master"), flags.String("swarm-host"), flags.String("swarm-discovery"))
+	swarmConfig := swarm.SwarmOptions{
+		IsSwarm:   flags.Bool("swarm"),
+		Discovery: flags.String("swarm-discovery"),
+		Master:    flags.Bool("swarm-master"),
+		Host:      flags.String("swarm-host"),
+		Addr:      flags.String("swarm-addr"),
+	}
+	authConfig := auth.AuthOptions{
+		StorePath:      hostPath,
+		CaCertPath:     s.CaCertPath,
+		PrivateKeyPath: s.PrivateKeyPath,
+	}
+	host, err := NewHost(name, driverName, authConfig, swarmConfig)
 	if err != nil {
 		return host, err
 	}
@@ -61,28 +75,13 @@ func (s *Store) Create(name string, driverName string, flags drivers.DriverOptio
 		return nil, err
 	}
 
+	// TODO: Should we even save the config so early?
 	if err := host.SaveConfig(); err != nil {
 		return host, err
 	}
 
 	if err := host.Create(name); err != nil {
 		return host, err
-	}
-
-	if err := host.ConfigureAuth(); err != nil {
-		return host, err
-	}
-
-	if flags.Bool("swarm") {
-		log.Info("Configuring Swarm...")
-
-		discovery := flags.String("swarm-discovery")
-		master := flags.Bool("swarm-master")
-		swarmHost := flags.String("swarm-host")
-		addr := flags.String("swarm-addr")
-		if err := host.ConfigureSwarm(discovery, master, swarmHost, addr); err != nil {
-			log.Errorf("Error configuring Swarm: %s", err)
-		}
 	}
 
 	return host, nil

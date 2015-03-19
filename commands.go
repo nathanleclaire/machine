@@ -29,6 +29,8 @@ import (
 	_ "github.com/docker/machine/drivers/vmwarefusion"
 	_ "github.com/docker/machine/drivers/vmwarevcloudair"
 	_ "github.com/docker/machine/drivers/vmwarevsphere"
+	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/swarm"
 	"github.com/docker/machine/state"
 	"github.com/docker/machine/utils"
 )
@@ -36,26 +38,24 @@ import (
 type machineConfig struct {
 	machineName    string
 	machineDir     string
-	caCertPath     string
-	caKeyPath      string
-	clientCertPath string
+	machineUrl     string
 	clientKeyPath  string
 	serverCertPath string
+	clientCertPath string
+	caCertPath     string
+	caKeyPath      string
 	serverKeyPath  string
-	machineUrl     string
-	swarmMaster    bool
-	swarmHost      string
-	swarmDiscovery string
+	AuthConfig     auth.AuthOptions
+	SwarmConfig    swarm.SwarmOptions
 }
 
 type hostListItem struct {
-	Name           string
-	Active         bool
-	DriverName     string
-	State          state.State
-	URL            string
-	SwarmMaster    bool
-	SwarmDiscovery string
+	Name        string
+	Active      bool
+	DriverName  string
+	State       state.State
+	URL         string
+	SwarmConfig swarm.SwarmOptions
 }
 
 func sortHostListItemsByName(items []hostListItem) {
@@ -389,10 +389,10 @@ func cmdConfig(c *cli.Context) {
 	}
 
 	if c.Bool("swarm") {
-		if !cfg.swarmMaster {
+		if !cfg.SwarmConfig.Master {
 			log.Fatalf("%s is not a swarm master", cfg.machineName)
 		}
-		u, err := url.Parse(cfg.swarmHost)
+		u, err := url.Parse(cfg.SwarmConfig.Host)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -483,12 +483,12 @@ func cmdLs(c *cli.Context) {
 
 	for _, host := range hostList {
 		if !quiet {
-			if host.SwarmMaster {
-				swarmMasters[host.SwarmDiscovery] = host.Name
+			if host.SwarmConfig.Master {
+				swarmMasters[host.SwarmConfig.Discovery] = host.Name
 			}
 
-			if host.SwarmDiscovery != "" {
-				swarmInfo[host.Name] = host.SwarmDiscovery
+			if host.SwarmConfig.Discovery != "" {
+				swarmInfo[host.Name] = host.SwarmConfig.Discovery
 			}
 
 			go getHostState(host, *store, hostListItems)
@@ -515,9 +515,9 @@ func cmdLs(c *cli.Context) {
 
 		swarmInfo := ""
 
-		if item.SwarmDiscovery != "" {
-			swarmInfo = swarmMasters[item.SwarmDiscovery]
-			if item.SwarmMaster {
+		if item.SwarmConfig.Discovery != "" {
+			swarmInfo = swarmMasters[item.SwarmConfig.Discovery]
+			if item.SwarmConfig.Master {
 				swarmInfo = fmt.Sprintf("%s (master)", swarmInfo)
 			}
 		}
@@ -579,10 +579,10 @@ func cmdEnv(c *cli.Context) {
 
 	dockerHost := cfg.machineUrl
 	if c.Bool("swarm") {
-		if !cfg.swarmMaster {
+		if !cfg.SwarmConfig.Master {
 			log.Fatalf("%s is not a swarm master", cfg.machineName)
 		}
-		u, err := url.Parse(cfg.swarmHost)
+		u, err := url.Parse(cfg.SwarmConfig.Host)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -883,13 +883,12 @@ func getHostState(host Host, store Store, hostListItems chan<- hostListItem) {
 	}
 
 	hostListItems <- hostListItem{
-		Name:           host.Name,
-		Active:         isActive,
-		DriverName:     host.Driver.DriverName(),
-		State:          currentState,
-		URL:            url,
-		SwarmMaster:    host.SwarmMaster,
-		SwarmDiscovery: host.SwarmDiscovery,
+		Name:        host.Name,
+		Active:      isActive,
+		DriverName:  host.Driver.DriverName(),
+		State:       currentState,
+		URL:         url,
+		SwarmConfig: host.SwarmConfig,
 	}
 }
 
@@ -933,15 +932,14 @@ func getMachineConfig(c *cli.Context) (*machineConfig, error) {
 	return &machineConfig{
 		machineName:    name,
 		machineDir:     machineDir,
-		caCertPath:     caCert,
-		caKeyPath:      caKey,
-		clientCertPath: clientCert,
-		clientKeyPath:  clientKey,
-		serverCertPath: serverCert,
-		serverKeyPath:  serverKey,
 		machineUrl:     machineUrl,
-		swarmMaster:    machine.SwarmMaster,
-		swarmHost:      machine.SwarmHost,
-		swarmDiscovery: machine.SwarmDiscovery,
+		clientKeyPath:  clientKey,
+		clientCertPath: clientCert,
+		serverCertPath: serverCert,
+		caKeyPath:      caKey,
+		caCertPath:     caCert,
+		serverKeyPath:  serverKey,
+		AuthConfig:     machine.AuthConfig,
+		SwarmConfig:    machine.SwarmConfig,
 	}, nil
 }

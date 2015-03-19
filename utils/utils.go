@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -97,6 +98,17 @@ func WaitForSpecific(f func() bool, maxAttempts int, waitInterval time.Duration)
 
 func WaitFor(f func() bool) error {
 	return WaitForSpecific(f, 60, 3*time.Second)
+}
+
+func WaitForDocker(addr string) error {
+	return WaitFor(func() bool {
+		conn, err := net.Dial("tcp", addr)
+		defer conn.Close()
+		if err != nil {
+			return false
+		}
+		return true
+	})
 }
 
 func DumpVal(vals ...interface{}) {
