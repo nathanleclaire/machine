@@ -138,7 +138,7 @@ func (provisioner *UbuntuProvisioner) SSHCommand(args ...string) (*exec.Cmd, err
 }
 
 func (provisioner *UbuntuProvisioner) CompatibleWithHost() bool {
-	return provisioner.OsReleaseInfo.Id == "Ubuntu"
+	return provisioner.OsReleaseInfo.Id == "ubuntu"
 }
 
 func (provisioner *UbuntuProvisioner) SetOsReleaseInfo(info *OsRelease) {
