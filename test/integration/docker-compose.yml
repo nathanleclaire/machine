@@ -1,0 +1,23 @@
+digitalocean:
+  build: .
+  environment:
+    DRIVER: digitalocean
+    DIGITALOCEAN_ACCESS_TOKEN: 
+  command: /integration/core
+amazonec2:
+  build: .
+  environment:
+    DRIVER: amazonec2
+    AWS_ACCESS_KEY_ID: 
+    AWS_SECRET_ACCESS_KEY: 
+    AWS_VPC_ID: 
+virtualbox:
+  environment:
+    DRIVER: virtualbox
+  image: nathanleclaire/virtualbox
+  net: host
+  privileged: true
+  volumes:
+    - /dev/vboxdrv:/dev/vboxdrv
+    - /dev/vboxnetctl:/dev/vboxnetctl
+  command: /integration/core
