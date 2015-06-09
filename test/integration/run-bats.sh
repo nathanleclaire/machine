@@ -90,7 +90,7 @@ fi
 # TODO: Should the script bail out if these are set already?
 export BASE_TEST_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export MACHINE_ROOT="$BASE_TEST_DIR/../.."
-export NAME="bats-$DRIVER-test"
+export MACHINE_NAME="bats-$DRIVER-test"
 export MACHINE_STORAGE_PATH="/tmp/machine-bats-test-$DRIVER"
 export MACHINE_BIN_NAME=docker-machine_$PLATFORM-$ARCH
 export BATS_LOG="$MACHINE_ROOT/bats.log"

@@ -26,3 +26,5 @@ function require_env () {
         exit 1
     fi
 }
+
+export NAME="$MACHINE_NAME-$USER-$(basename $BATS_TEST_FILENAME)"

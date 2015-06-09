@@ -2,18 +2,22 @@ digitalocean:
   build: .
   environment:
     DRIVER: digitalocean
-    DIGITALOCEAN_ACCESS_TOKEN: 
+    DIGITALOCEAN_ACCESS_TOKEN:
+    USER:
   command: /integration/core
 amazonec2:
   build: .
   environment:
     DRIVER: amazonec2
-    AWS_ACCESS_KEY_ID: 
-    AWS_SECRET_ACCESS_KEY: 
-    AWS_VPC_ID: 
+    AWS_ACCESS_KEY_ID:
+    AWS_SECRET_ACCESS_KEY:
+    AWS_VPC_ID:
+    USER:
+  command: /integration/core
 virtualbox:
   environment:
     DRIVER: virtualbox
+    USER:
   image: nathanleclaire/virtualbox
   net: host
   privileged: true
