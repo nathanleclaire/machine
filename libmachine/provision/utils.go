@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/provision/pkgaction"
@@ -57,12 +58,13 @@ func ConfigureAuth(p Provisioner) error {
 		err error
 	)
 
-	machineName := p.GetDriver().GetMachineName()
+	driver := p.GetDriver()
+	machineName := driver.GetMachineName()
 	authOptions := p.GetAuthOptions()
 	org := machineName
 	bits := 2048
 
-	ip, err := p.GetDriver().GetIP()
+	ip, err := driver.GetIP()
 	if err != nil {
 		return err
 	}
@@ -141,7 +143,7 @@ func ConfigureAuth(p Provisioner) error {
 		return err
 	}
 
-	dockerUrl, err := p.GetDriver().GetURL()
+	dockerUrl, err := driver.GetURL()
 	if err != nil {
 		return err
 	}
@@ -172,10 +174,17 @@ func ConfigureAuth(p Provisioner) error {
 		return err
 	}
 
-	// TODO: Do not hardcode daemon port, ask the driver
-	if err := utils.WaitForDocker(ip, dockerPort); err != nil {
-		return err
-	}
+	waitForDocker(p, dockerPort)
 
 	return nil
+}
+
+func waitForDocker(p Provisioner, dockerPort int) {
+	utils.WaitForSpecific(func() bool {
+		// HACK: Check netstat's output to see if anyone's listening on the Docker API port.
+		if _, err := p.SSHCommand(fmt.Sprintf("netstat -a | grep %d", dockerPort)); err != nil {
+			return false
+		}
+		return true
+	}, 5, 3*time.Second)
 }

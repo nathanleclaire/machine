@@ -189,16 +189,9 @@ func (provisioner *Boot2DockerProvisioner) Provision(swarmOptions swarm.SwarmOpt
 		return err
 	}
 
-	ip, err := provisioner.GetDriver().GetIP()
-	if err != nil {
-		return err
-	}
-
 	// b2d hosts need to wait for the daemon to be up
 	// before continuing with provisioning
-	if err := utils.WaitForDocker(ip, 2376); err != nil {
-		return err
-	}
+	waitForDocker(provisioner, 2376)
 
 	if err := makeDockerOptionsDir(provisioner); err != nil {
 		return err
