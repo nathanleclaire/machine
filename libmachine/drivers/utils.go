@@ -8,6 +8,10 @@ import (
 	"github.com/docker/machine/libmachine/ssh"
 )
 
+const (
+	ErrExitCode255 = "255"
+)
+
 func GetSSHClientFromDriver(d Driver) (ssh.Client, error) {
 	addr, err := d.GetSSHHostname()
 	if err != nil {

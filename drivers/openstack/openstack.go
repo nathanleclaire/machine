@@ -17,7 +17,6 @@ import (
 type Driver struct {
 	*drivers.BaseDriver
 	AuthUrl          string
-	ActiveTimeout    int
 	Insecure         bool
 	DomainID         string
 	DomainName       string
@@ -41,12 +40,6 @@ type Driver struct {
 	FloatingIpPoolId string
 	client           Client
 }
-
-const (
-	defaultSSHUser       = "root"
-	defaultSSHPort       = 22
-	defaultActiveTimeout = 200
-)
 
 func init() {
 	drivers.Register("openstack", &drivers.RegisteredDriver{
@@ -163,36 +156,28 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "openstack-ssh-user",
 			Usage: "OpenStack SSH user",
-			Value: defaultSSHUser,
+			Value: "root",
 		},
 		cli.IntFlag{
 			Name:  "openstack-ssh-port",
 			Usage: "OpenStack SSH port",
-			Value: defaultSSHPort,
-		},
-		cli.IntFlag{
-			Name:  "openstack-active-timeout",
-			Usage: "OpenStack active timeout",
-			Value: defaultActiveTimeout,
+			Value: 22,
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return NewDerivedDriver(hostName, artifactPath)
 }
 
-func NewDerivedDriver(hostName, artifactPath string) *Driver {
+func NewDerivedDriver(hostName, artifactPath string) (*Driver, error) {
 	return &Driver{
-		client:        &GenericClient{},
-		ActiveTimeout: defaultActiveTimeout,
+		client: &GenericClient{},
 		BaseDriver: &drivers.BaseDriver{
-			SSHUser:      defaultSSHUser,
-			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -205,7 +190,6 @@ func (d *Driver) DriverName() string {
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.AuthUrl = flags.String("openstack-auth-url")
-	d.ActiveTimeout = flags.Int("openstack-active-timeout")
 	d.Insecure = flags.Bool("openstack-insecure")
 	d.DomainID = flags.String("openstack-domain-id")
 	d.DomainName = flags.String("openstack-domain-name")

@@ -22,16 +22,11 @@ import (
 
 const (
 	driverName               = "amazonec2"
-	ipRange                  = "0.0.0.0/0"
-	machineSecurityGroupName = "docker-machine"
-	defaultAmiId             = "ami-615cb725"
 	defaultRegion            = "us-east-1"
 	defaultInstanceType      = "t2.micro"
 	defaultRootSize          = 16
-	defaultZone              = "a"
-	defaultSecurityGroup     = machineSecurityGroupName
-	defaultSSHUser           = "ubuntu"
-	defaultSpotPrice         = "0.50"
+	ipRange                  = "0.0.0.0/0"
+	machineSecurityGroupName = "docker-machine"
 )
 
 var (
@@ -68,8 +63,6 @@ type Driver struct {
 	Monitoring          bool
 }
 
-const ()
-
 func init() {
 	drivers.Register(driverName, &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -81,16 +74,19 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "amazonec2-access-key",
 			Usage:  "AWS Access Key",
+			Value:  "",
 			EnvVar: "AWS_ACCESS_KEY_ID",
 		},
 		cli.StringFlag{
 			Name:   "amazonec2-secret-key",
 			Usage:  "AWS Secret Key",
+			Value:  "",
 			EnvVar: "AWS_SECRET_ACCESS_KEY",
 		},
 		cli.StringFlag{
 			Name:   "amazonec2-session-token",
 			Usage:  "AWS Session Token",
+			Value:  "",
 			EnvVar: "AWS_SESSION_TOKEN",
 		},
 		cli.StringFlag{
@@ -107,23 +103,25 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "amazonec2-vpc-id",
 			Usage:  "AWS VPC id",
+			Value:  "",
 			EnvVar: "AWS_VPC_ID",
 		},
 		cli.StringFlag{
 			Name:   "amazonec2-zone",
 			Usage:  "AWS zone for instance (i.e. a,b,c,d,e)",
-			Value:  defaultZone,
+			Value:  "a",
 			EnvVar: "AWS_ZONE",
 		},
 		cli.StringFlag{
 			Name:   "amazonec2-subnet-id",
 			Usage:  "AWS VPC subnet id",
+			Value:  "",
 			EnvVar: "AWS_SUBNET_ID",
 		},
 		cli.StringFlag{
 			Name:   "amazonec2-security-group",
 			Usage:  "AWS VPC security group",
-			Value:  defaultSecurityGroup,
+			Value:  "docker-machine",
 			EnvVar: "AWS_SECURITY_GROUP",
 		},
 		cli.StringFlag{
@@ -146,7 +144,7 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "amazonec2-ssh-user",
 			Usage:  "set the name of the ssh user",
-			Value:  defaultSSHUser,
+			Value:  "ubuntu",
 			EnvVar: "AWS_SSH_USER",
 		},
 		cli.BoolFlag{
@@ -156,7 +154,7 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "amazonec2-spot-price",
 			Usage: "AWS spot instance bid price (in dollar)",
-			Value: defaultSpotPrice,
+			Value: "0.50",
 		},
 		cli.BoolFlag{
 			Name:  "amazonec2-private-address-only",
@@ -173,23 +171,15 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	id := generateId()
 	return &Driver{
-		Id:                id,
-		AMI:               defaultAmiId,
-		Region:            defaultRegion,
-		InstanceType:      defaultInstanceType,
-		RootSize:          defaultRootSize,
-		Zone:              defaultZone,
-		SecurityGroupName: defaultSecurityGroup,
-		SpotPrice:         defaultSpotPrice,
+		Id: id,
 		BaseDriver: &drivers.BaseDriver{
-			SSHUser:      defaultSSHUser,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {

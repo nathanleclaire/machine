@@ -37,15 +37,6 @@ type Driver struct {
 	VAppID       string
 }
 
-const (
-	defaultCatalog     = "Public Catalog"
-	defaultCatalogItem = "Ubuntu Server 12.04 LTS (amd64 20150127)"
-	defaultCpus        = 1
-	defaultMemory      = 2048
-	defaultSSHPort     = 22
-	defaultDockerPort  = 2376
-)
-
 func init() {
 	drivers.Register("vmwarevcloudair", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -95,13 +86,13 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "VCLOUDAIR_CATALOG",
 			Name:   "vmwarevcloudair-catalog",
 			Usage:  "vCloud Air Catalog (default is Public Catalog)",
-			Value:  defaultCatalog,
+			Value:  "Public Catalog",
 		},
 		cli.StringFlag{
 			EnvVar: "VCLOUDAIR_CATALOGITEM",
 			Name:   "vmwarevcloudair-catalogitem",
 			Usage:  "vCloud Air Catalog Item (default is Ubuntu Precise)",
-			Value:  defaultCatalogItem,
+			Value:  "Ubuntu Server 12.04 LTS (amd64 20150127)",
 		},
 
 		// BoolTFlag is true by default.
@@ -115,42 +106,36 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "VCLOUDAIR_CPU_COUNT",
 			Name:   "vmwarevcloudair-cpu-count",
 			Usage:  "vCloud Air VM Cpu Count (default 1)",
-			Value:  defaultCpus,
+			Value:  1,
 		},
 		cli.IntFlag{
 			EnvVar: "VCLOUDAIR_MEMORY_SIZE",
 			Name:   "vmwarevcloudair-memory-size",
 			Usage:  "vCloud Air VM Memory Size in MB (default 2048)",
-			Value:  defaultMemory,
+			Value:  2048,
 		},
 		cli.IntFlag{
 			EnvVar: "VCLOUDAIR_SSH_PORT",
 			Name:   "vmwarevcloudair-ssh-port",
 			Usage:  "vCloud Air SSH port",
-			Value:  defaultSSHPort,
+			Value:  22,
 		},
 		cli.IntFlag{
 			EnvVar: "VCLOUDAIR_DOCKER_PORT",
 			Name:   "vmwarevcloudair-docker-port",
 			Usage:  "vCloud Air Docker port",
-			Value:  defaultDockerPort,
+			Value:  2376,
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
-		Catalog:     defaultCatalog,
-		CatalogItem: defaultCatalogItem,
-		CPUCount:    defaultCpus,
-		MemorySize:  defaultMemory,
-		DockerPort:  defaultDockerPort,
 		BaseDriver: &drivers.BaseDriver{
-			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

@@ -31,15 +31,6 @@ type Driver struct {
 	DockerSwarmMasterPort   int
 }
 
-const (
-	defaultDockerPort      = 2376
-	defaultSwarmMasterPort = 3376
-	defaultLocation        = "West US"
-	defaultSize            = "Small"
-	defaultSSHPort         = 22
-	defaultSSHUsername     = "ubuntu"
-)
-
 func init() {
 	drivers.Register("azure", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -53,12 +44,12 @@ func GetCreateFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  "azure-docker-port",
 			Usage: "Azure Docker port",
-			Value: defaultDockerPort,
+			Value: 2376,
 		},
 		cli.IntFlag{
 			Name:  "azure-docker-swarm-master-port",
 			Usage: "Azure Docker Swarm master port",
-			Value: defaultSwarmMasterPort,
+			Value: 3376,
 		},
 		cli.StringFlag{
 			EnvVar: "AZURE_IMAGE",
@@ -69,7 +60,7 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "AZURE_LOCATION",
 			Name:   "azure-location",
 			Usage:  "Azure location",
-			Value:  defaultLocation,
+			Value:  "West US",
 		},
 		cli.StringFlag{
 			Name:  "azure-password",
@@ -84,12 +75,12 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "AZURE_SIZE",
 			Name:   "azure-size",
 			Usage:  "Azure size",
-			Value:  defaultSize,
+			Value:  "Small",
 		},
 		cli.IntFlag{
 			Name:  "azure-ssh-port",
 			Usage: "Azure SSH port",
-			Value: defaultSSHPort,
+			Value: 22,
 		},
 
 		cli.StringFlag{
@@ -105,25 +96,19 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "azure-username",
 			Usage: "Azure username",
-			Value: defaultSSHUsername,
+			Value: "ubuntu",
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	d := &Driver{
-		DockerPort:            defaultDockerPort,
-		DockerSwarmMasterPort: defaultSwarmMasterPort,
-		Location:              defaultLocation,
-		Size:                  defaultSize,
 		BaseDriver: &drivers.BaseDriver{
-			SSHPort:      defaultSSHPort,
-			SSHUser:      defaultSSHUsername,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
 	}
-	return d
+	return d, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

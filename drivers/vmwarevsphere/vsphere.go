@@ -24,10 +24,11 @@ import (
 )
 
 const (
-	isoFilename = "boot2docker.iso"
-	B2DISOName  = isoFilename
-	B2DUser     = "docker"
-	B2DPass     = "tcuser"
+	isoFilename      = "boot2docker.iso"
+	B2DISOName       = isoFilename
+	DefaultCPUNumber = 2
+	B2DUser          = "docker"
+	B2DPass          = "tcuser"
 )
 
 type Driver struct {
@@ -47,12 +48,6 @@ type Driver struct {
 	ISO            string
 }
 
-const (
-	defaultCpus     = 2
-	defaultMemory   = 2048
-	defaultDiskSize = 20000
-)
-
 func init() {
 	drivers.Register("vmwarevsphere", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -67,19 +62,19 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "VSPHERE_CPU_COUNT",
 			Name:   "vmwarevsphere-cpu-count",
 			Usage:  "vSphere CPU number for docker VM",
-			Value:  defaultCpus,
+			Value:  2,
 		},
 		cli.IntFlag{
 			EnvVar: "VSPHERE_MEMORY_SIZE",
 			Name:   "vmwarevsphere-memory-size",
 			Usage:  "vSphere size of memory for docker VM (in MB)",
-			Value:  defaultMemory,
+			Value:  2048,
 		},
 		cli.IntFlag{
 			EnvVar: "VSPHERE_DISK_SIZE",
 			Name:   "vmwarevsphere-disk-size",
 			Usage:  "vSphere size of disk for docker VM (in MB)",
-			Value:  defaultDiskSize,
+			Value:  20000,
 		},
 		cli.StringFlag{
 			EnvVar: "VSPHERE_BOOT2DOCKER_URL",
@@ -129,16 +124,13 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
-		CPU:      defaultCpus,
-		Memory:   defaultMemory,
-		DiskSize: defaultDiskSize,
 		BaseDriver: &drivers.BaseDriver{
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
