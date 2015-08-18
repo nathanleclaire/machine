@@ -2,8 +2,6 @@
 
 default: build
 
-remote: build-remote
-
 test:
 	script/test
 
@@ -18,8 +16,11 @@ validate: validate-dco validate-gofmt test
 build: clean
 	script/build
 
-build-remote: clean
+remote: clean
 	script/build-remote
+
+rmi:
+	docker rmi docker-machine-build
 
 clean:
 	rm -f docker-machine_*

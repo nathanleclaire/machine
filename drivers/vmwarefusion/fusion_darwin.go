@@ -19,10 +19,11 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/machine/drivers"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 	cryptossh "golang.org/x/crypto/ssh"
 )
 
@@ -129,7 +130,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.DiskSize = flags.Int("vmwarefusion-disk-size")
 	d.Boot2DockerURL = flags.String("vmwarefusion-boot2docker-url")
 	d.ConfigDriveURL = flags.String("vmwarefusion-configdrive-url")
-	d.ConfigDriveISO = d.ResolveStorePath(isoConfigDrive)
 	d.ISO = d.ResolveStorePath(isoFilename)
 	d.SwarmMaster = flags.Bool("swarm-master")
 	d.SwarmHost = flags.String("swarm-host")
@@ -191,8 +191,7 @@ func (d *Driver) PreCreateCheck() error {
 }
 
 func (d *Driver) Create() error {
-
-	b2dutils := utils.NewB2dUtils("", "")
+	b2dutils := mcnutils.NewB2dUtils("", "", d.GlobalArtifactPath())
 	if err := b2dutils.CopyIsoToMachineDir(d.Boot2DockerURL, d.MachineName); err != nil {
 		return err
 	}
@@ -211,7 +210,7 @@ func (d *Driver) Create() error {
 	}
 
 	log.Infof("Creating VM...")
-	if err := os.MkdirAll(d.ResolveStorePath("."), 0755); err != nil {
+	if err := os.MkdirAll(d.LocalArtifactPath("."), 0755); err != nil {
 		return err
 	}
 
@@ -228,7 +227,7 @@ func (d *Driver) Create() error {
 	vmxt.Execute(vmxfile, d)
 
 	// Generate vmdk file
-	diskImg := d.ResolveStorePath(fmt.Sprintf("%s.vmdk", d.MachineName))
+	diskImg := d.LocalArtifactPath(fmt.Sprintf("%s.vmdk", d.MachineName))
 	if _, err := os.Stat(diskImg); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -320,7 +319,7 @@ func (d *Driver) Create() error {
 	vmrun("-gu", B2DUser, "-gp", B2DPass, "directoryExistsInGuest", d.vmxPath(), "/var/lib/boot2docker")
 
 	// Copy SSH keys bundle
-	vmrun("-gu", B2DUser, "-gp", B2DPass, "CopyFileFromHostToGuest", d.vmxPath(), d.ResolveStorePath("userdata.tar"), "/home/docker/userdata.tar")
+	vmrun("-gu", B2DUser, "-gp", B2DPass, "CopyFileFromHostToGuest", d.vmxPath(), d.LocalArtifactPath("userdata.tar"), "/home/docker/userdata.tar")
 
 	// Expand tar file.
 	vmrun("-gu", B2DUser, "-gp", B2DPass, "runScriptInGuest", d.vmxPath(), "/bin/sh", "sudo /bin/mv /home/docker/userdata.tar /var/lib/boot2docker/userdata.tar && sudo tar xf /var/lib/boot2docker/userdata.tar -C /home/docker/ > /var/log/userdata.log 2>&1 && sudo chown -R docker:staff /home/docker")
@@ -415,11 +414,11 @@ func (d *Driver) Upgrade() error {
 }
 
 func (d *Driver) vmxPath() string {
-	return d.ResolveStorePath(fmt.Sprintf("%s.vmx", d.MachineName))
+	return d.LocalArtifactPath(fmt.Sprintf("%s.vmx", d.MachineName))
 }
 
 func (d *Driver) vmdkPath() string {
-	return d.ResolveStorePath(fmt.Sprintf("%s.vmdk", d.MachineName))
+	return d.LocalArtifactPath(fmt.Sprintf("%s.vmdk", d.MachineName))
 }
 
 func (d *Driver) getIPfromDHCPLease() (string, error) {
@@ -514,7 +513,7 @@ func (d *Driver) generateKeyBundle() error {
 
 	magicString := "boot2docker, this is vmware speaking"
 
-	tf, err := os.Create(d.ResolveStorePath("userdata.tar"))
+	tf, err := os.Create(d.LocalArtifactPath("userdata.tar"))
 	if err != nil {
 		return err
 	}

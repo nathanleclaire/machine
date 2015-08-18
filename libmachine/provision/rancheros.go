@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/engine"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/provision/pkgaction"
+	"github.com/docker/machine/libmachine/state"
 	"github.com/docker/machine/libmachine/swarm"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
 )
 
 const (
@@ -167,7 +167,7 @@ func (provisioner *RancherProvisioner) upgradeIso() error {
 		return err
 	}
 
-	if err := utils.WaitFor(drivers.MachineInState(provisioner.Driver, state.Stopped)); err != nil {
+	if err := mcnutils.WaitFor(drivers.MachineInState(provisioner.Driver, state.Stopped)); err != nil {
 		return err
 	}
 
@@ -175,7 +175,7 @@ func (provisioner *RancherProvisioner) upgradeIso() error {
 
 	log.Infof("Upgrading machine %s...", machineName)
 
-	b2dutils := utils.NewB2dUtils("", "")
+	b2dutils := mcnutils.NewB2dUtils("", "", provisioner.Driver.GlobalArtifactPath())
 
 	url, err := provisioner.getLatestISOURL()
 	if err != nil {
@@ -197,7 +197,7 @@ func (provisioner *RancherProvisioner) upgradeIso() error {
 		return err
 	}
 
-	return utils.WaitFor(drivers.MachineInState(provisioner.Driver, state.Running))
+	return mcnutils.WaitFor(drivers.MachineInState(provisioner.Driver, state.Running))
 }
 
 func (provisioner *RancherProvisioner) getLatestISOURL() (string, error) {

@@ -12,11 +12,11 @@ import (
 	"github.com/vmware/govcloudair"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 )
 
 type Driver struct {
@@ -39,7 +39,6 @@ type Driver struct {
 
 func init() {
 	drivers.Register("vmwarevcloudair", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -130,9 +129,13 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	return &Driver{BaseDriver: inner}, nil
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	return &Driver{
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -645,7 +648,7 @@ func (d *Driver) Kill() error {
 // Helpers
 
 func generateVMName() string {
-	randomID := utils.TruncateID(utils.GenerateRandomID())
+	randomID := mcnutils.TruncateID(mcnutils.GenerateRandomID())
 	return fmt.Sprintf("docker-host-%s", randomID)
 }
 

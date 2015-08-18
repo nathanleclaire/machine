@@ -9,19 +9,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/docker/machine/log"
+	"github.com/docker/machine/libmachine/log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/drivers/vmwarevsphere/errors"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 )
 
 const (
@@ -51,7 +50,6 @@ type Driver struct {
 
 func init() {
 	drivers.Register("vmwarevsphere", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -126,9 +124,13 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	return &Driver{BaseDriver: inner}, nil
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	return &Driver{
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -166,10 +168,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.SwarmHost = flags.String("swarm-host")
 	d.SwarmDiscovery = flags.String("swarm-discovery")
 
-	imgPath := utils.GetMachineCacheDir()
-	commonIsoPath := filepath.Join(imgPath, isoFilename)
-
-	d.ISO = path.Join(commonIsoPath)
+	d.ISO = filepath.Join(d.GlobalArtifactPath(), isoFilename)
 
 	return nil
 }
@@ -225,7 +224,7 @@ func (d *Driver) Create() error {
 		return err
 	}
 
-	b2dutils := utils.NewB2dUtils("", "")
+	b2dutils := mcnutils.NewB2dUtils("", "", d.GlobalArtifactPath())
 	if err := b2dutils.CopyIsoToMachineDir(d.Boot2DockerURL, d.MachineName); err != nil {
 		return err
 	}
@@ -274,7 +273,7 @@ func (d *Driver) Create() error {
 	}
 
 	// Copy SSH keys bundle
-	if err := vcConn.GuestUpload(B2DUser, B2DPass, d.ResolveStorePath("userdata.tar"), "/home/docker/userdata.tar"); err != nil {
+	if err := vcConn.GuestUpload(B2DUser, B2DPass, d.LocalArtifactPath("userdata.tar"), "/home/docker/userdata.tar"); err != nil {
 		return err
 	}
 
@@ -422,7 +421,7 @@ func (d *Driver) generateKeyBundle() error {
 
 	magicString := "boot2docker, this is vmware speaking"
 
-	tf, err := os.Create(d.ResolveStorePath("userdata.tar"))
+	tf, err := os.Create(d.LocalArtifactPath("userdata.tar"))
 	if err != nil {
 		return err
 	}

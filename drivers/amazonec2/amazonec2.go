@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/drivers/amazonec2/amz"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 )
 
 const (
@@ -65,7 +65,6 @@ type Driver struct {
 
 func init() {
 	drivers.Register(driverName, &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -172,12 +171,14 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	id := generateId()
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
 	return &Driver{
-		Id:         id,
-		BaseDriver: inner,
+		Id: id,
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
 	}, nil
 }
 
@@ -372,7 +373,7 @@ func (d *Driver) Create() error {
 	d.InstanceId = instance.InstanceId
 
 	log.Debug("waiting for ip address to become available")
-	if err := utils.WaitFor(d.instanceIpAvailable); err != nil {
+	if err := mcnutils.WaitFor(d.instanceIpAvailable); err != nil {
 		return err
 	}
 
@@ -537,7 +538,7 @@ func (d *Driver) instanceIsRunning() bool {
 }
 
 func (d *Driver) waitForInstance() error {
-	if err := utils.WaitFor(d.instanceIsRunning); err != nil {
+	if err := mcnutils.WaitFor(d.instanceIsRunning); err != nil {
 		return err
 	}
 
@@ -623,7 +624,7 @@ func (d *Driver) configureSecurityGroup(groupName string) error {
 		securityGroup = group
 		// wait until created (dat eventual consistency)
 		log.Debugf("waiting for group (%s) to become available", group.GroupId)
-		if err := utils.WaitFor(d.securityGroupAvailableFunc(group.GroupId)); err != nil {
+		if err := mcnutils.WaitFor(d.securityGroupAvailableFunc(group.GroupId)); err != nil {
 			return err
 		}
 	}

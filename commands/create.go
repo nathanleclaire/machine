@@ -1,31 +1,48 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
 
-	"github.com/docker/machine/log"
-
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
+	"github.com/docker/machine/commands/mcndirs"
+	"github.com/docker/machine/drivers/driverfactory"
 	"github.com/docker/machine/libmachine"
 	"github.com/docker/machine/libmachine/auth"
+	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/engine"
+	"github.com/docker/machine/libmachine/host"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnerror"
+	"github.com/docker/machine/libmachine/persist"
 	"github.com/docker/machine/libmachine/swarm"
-	"github.com/docker/machine/utils"
+)
+
+var (
+	ErrDriverNotRecognized = errors.New("Driver not recognized.")
 )
 
 func cmdCreate(c *cli.Context) {
 	var (
-		err error
+		driver drivers.Driver
 	)
-	driver := c.String("driver")
+
+	driverName := c.String("driver")
 	name := c.Args().First()
+	certInfo := getCertPathInfoFromContext(c)
+	store := &persist.Filestore{
+		Path:             c.GlobalString("storage-path"),
+		CaCertPath:       certInfo.CaCertPath,
+		CaPrivateKeyPath: certInfo.CaPrivateKeyPath,
+	}
 
 	// TODO: Not really a fan of "none" as the default driver...
-	if driver != "none" {
-		c.App.Commands, err = trimDriverFlags(driver, c.App.Commands)
+	if driverName != "none" {
+		var err error
+
+		c.App.Commands, err = trimDriverFlags(driverName, c.App.Commands)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -40,38 +57,15 @@ func cmdCreate(c *cli.Context) {
 		log.Fatalf("Error parsing swarm discovery: %s", err)
 	}
 
-	certInfo := getCertPathInfo(c)
-
-	if err := setupCertificates(
-		certInfo.CaCertPath,
-		certInfo.CaKeyPath,
-		certInfo.ClientCertPath,
-		certInfo.ClientKeyPath); err != nil {
-		log.Fatalf("Error generating certificates: %s", err)
-	}
-
-	defaultStore, err := getDefaultStore(
-		c.GlobalString("storage-path"),
-		certInfo.CaCertPath,
-		certInfo.CaKeyPath,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	provider, err := newProvider(defaultStore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	hostOptions := &libmachine.HostOptions{
+	hostOptions := &host.HostOptions{
 		AuthOptions: &auth.AuthOptions{
-			CaCertPath:     certInfo.CaCertPath,
-			PrivateKeyPath: certInfo.CaKeyPath,
-			ClientCertPath: certInfo.ClientCertPath,
-			ClientKeyPath:  certInfo.ClientKeyPath,
-			ServerCertPath: filepath.Join(utils.GetMachineDir(), name, "server.pem"),
-			ServerKeyPath:  filepath.Join(utils.GetMachineDir(), name, "server-key.pem"),
+			CertDir:          mcndirs.GetMachineCertDir(),
+			CaCertPath:       certInfo.CaCertPath,
+			CaPrivateKeyPath: certInfo.CaPrivateKeyPath,
+			ClientCertPath:   certInfo.ClientCertPath,
+			ClientKeyPath:    certInfo.ClientKeyPath,
+			ServerCertPath:   filepath.Join(mcndirs.GetMachineDir(), name, "server.pem"),
+			ServerKeyPath:    filepath.Join(mcndirs.GetMachineDir(), name, "server-key.pem"),
 		},
 		EngineOptions: &engine.EngineOptions{
 			ArbitraryFlags:   c.StringSlice("engine-opt"),
@@ -95,10 +89,34 @@ func cmdCreate(c *cli.Context) {
 		},
 	}
 
-	_, err = provider.Create(name, driver, hostOptions, c)
+	driver, err := driverfactory.NewDriver(driverName, name, c.GlobalString("storage-path"))
 	if err != nil {
-		log.Errorf("Error creating machine: %s", err)
-		log.Fatal("You will want to check the provider to make sure the machine and associated resources were properly removed.")
+		log.Fatalf("Error trying to get driver: %s", err)
+	}
+
+	h, err := store.NewHost(driver)
+	if err != nil {
+		log.Fatalf("Error getting new host: %s", err)
+	}
+
+	h.HostOptions = hostOptions
+
+	exists, err := store.Exists(h.Name)
+	if err != nil {
+		log.Fatalf("Error checking if host exists: %s", err)
+	}
+	if exists {
+		log.Fatal(mcnerror.ErrHostAlreadyExists{h.Name})
+	}
+
+	// TODO: This should be moved out of the driver and done in the
+	// commands module.
+	if err := h.Driver.SetConfigFromFlags(c); err != nil {
+		log.Fatalf("Error setting machine configuration from flags provided: %s", err)
+	}
+
+	if err := libmachine.Create(store, h); err != nil {
+		log.Fatal(err)
 	}
 
 	info := fmt.Sprintf("%s env %s", c.App.Name, name)

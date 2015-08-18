@@ -8,56 +8,55 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/state"
+	"github.com/docker/machine/libmachine/swarm"
 	"github.com/skarademir/naturalsort"
 
-	"github.com/docker/machine/drivers"
-	_ "github.com/docker/machine/drivers/amazonec2"
-	_ "github.com/docker/machine/drivers/azure"
+	//_ "github.com/docker/machine/libmachine/drivers/amazonec2"
+	//_ "github.com/docker/machine/libmachine/drivers/azure"
 	_ "github.com/docker/machine/drivers/digitalocean"
-	_ "github.com/docker/machine/drivers/exoscale"
-	_ "github.com/docker/machine/drivers/generic"
-	_ "github.com/docker/machine/drivers/google"
-	_ "github.com/docker/machine/drivers/hyperv"
+	//_ "github.com/docker/machine/libmachine/drivers/exoscale"
+	//_ "github.com/docker/machine/libmachine/drivers/generic"
+	//_ "github.com/docker/machine/libmachine/drivers/google"
+	//_ "github.com/docker/machine/libmachine/drivers/hyperv"
 	_ "github.com/docker/machine/drivers/none"
-	_ "github.com/docker/machine/drivers/openstack"
-	_ "github.com/docker/machine/drivers/rackspace"
-	_ "github.com/docker/machine/drivers/softlayer"
+	//_ "github.com/docker/machine/libmachine/drivers/openstack"
+	//_ "github.com/docker/machine/libmachine/drivers/rackspace"
+	//_ "github.com/docker/machine/libmachine/drivers/softlayer"
 	_ "github.com/docker/machine/drivers/virtualbox"
-	_ "github.com/docker/machine/drivers/vmwarefusion"
-	_ "github.com/docker/machine/drivers/vmwarevcloudair"
-	_ "github.com/docker/machine/drivers/vmwarevsphere"
+	//_ "github.com/docker/machine/libmachine/drivers/vmwarefusion"
+	//_ "github.com/docker/machine/libmachine/drivers/vmwarevcloudair"
+	//_ "github.com/docker/machine/libmachine/drivers/vmwarevsphere"
 
-	"github.com/docker/machine/libmachine"
-	"github.com/docker/machine/libmachine/auth"
-	"github.com/docker/machine/libmachine/swarm"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/commands/mcndirs"
+	"github.com/docker/machine/libmachine/cert"
+	"github.com/docker/machine/libmachine/host"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/persist"
 )
 
 var (
+	stateTimeoutDuration  = time.Second * 3
 	ErrUnknownShell       = errors.New("Error: Unknown shell")
 	ErrNoMachineSpecified = errors.New("Error: Expected to get one or more machine names as arguments.")
 	ErrExpectedOneMachine = errors.New("Error: Expected one machine name as an argument.")
 )
 
-type machineConfig struct {
-	machineName    string
-	machineDir     string
-	machineUrl     string
-	clientKeyPath  string
-	serverCertPath string
-	clientCertPath string
-	caCertPath     string
-	caKeyPath      string
-	serverKeyPath  string
-	AuthOptions    auth.AuthOptions
-	SwarmOptions   swarm.SwarmOptions
+type HostListItem struct {
+	Name         string
+	Active       bool
+	DriverName   string
+	State        state.State
+	URL          string
+	SwarmOptions *swarm.SwarmOptions
 }
 
-func sortHostListItemsByName(items []libmachine.HostListItem) {
-	m := make(map[string]libmachine.HostListItem, len(items))
+func sortHostListItemsByName(items []HostListItem) {
+	m := make(map[string]HostListItem, len(items))
 	s := make([]string, len(items))
 	for i, v := range items {
 		name := strings.ToLower(v.Name)
@@ -88,73 +87,31 @@ func confirmInput(msg string) bool {
 	return false
 }
 
-func newProvider(store libmachine.Store) (*libmachine.Provider, error) {
-	return libmachine.New(store)
-}
-
 func getMachineDir(rootPath string) string {
 	return filepath.Join(rootPath, "machines")
 }
 
-func getDefaultStore(rootPath, caCertPath, privateKeyPath string) (libmachine.Store, error) {
-	return libmachine.NewFilestore(
-		rootPath,
-		caCertPath,
-		privateKeyPath,
-	), nil
+func getStore(c *cli.Context) persist.Store {
+	certInfo := getCertPathInfoFromContext(c)
+	return &persist.Filestore{
+		Path:             c.GlobalString("storage-path"),
+		CaCertPath:       certInfo.CaCertPath,
+		CaPrivateKeyPath: certInfo.CaPrivateKeyPath,
+	}
 }
 
-func setupCertificates(caCertPath, caKeyPath, clientCertPath, clientKeyPath string) error {
-	org := utils.GetUsername()
-	bits := 2048
-
-	if _, err := os.Stat(utils.GetMachineCertDir()); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(utils.GetMachineCertDir(), 0700); err != nil {
-				log.Fatalf("Error creating machine config dir: %s", err)
-			}
-		} else {
-			log.Fatal(err)
-		}
+func getFirstArgHost(c *cli.Context) *host.Host {
+	store := getStore(c)
+	hostName := c.Args().First()
+	h, err := store.Load(hostName)
+	if err != nil {
+		// I guess I feel OK with bailing here since if we can't get
+		// the host reliably we're definitely not going to be able to
+		// do anything else interesting, but also this premature exit
+		// feels wrong to me.  Let's revisit it later.
+		log.Fatalf("Error trying to get host %q: %s", hostName, err)
 	}
-
-	if _, err := os.Stat(caCertPath); os.IsNotExist(err) {
-		log.Infof("Creating CA: %s", caCertPath)
-
-		// check if the key path exists; if so, error
-		if _, err := os.Stat(caKeyPath); err == nil {
-			log.Fatalf("The CA key already exists.  Please remove it or specify a different key/cert.")
-		}
-
-		if err := utils.GenerateCACertificate(caCertPath, caKeyPath, org, bits); err != nil {
-			log.Infof("Error generating CA certificate: %s", err)
-		}
-	}
-
-	if _, err := os.Stat(clientCertPath); os.IsNotExist(err) {
-		log.Infof("Creating client certificate: %s", clientCertPath)
-
-		if _, err := os.Stat(utils.GetMachineCertDir()); err != nil {
-			if os.IsNotExist(err) {
-				if err := os.Mkdir(utils.GetMachineCertDir(), 0700); err != nil {
-					log.Fatalf("Error creating machine client cert dir: %s", err)
-				}
-			} else {
-				log.Fatal(err)
-			}
-		}
-
-		// check if the key path exists; if so, error
-		if _, err := os.Stat(clientKeyPath); err == nil {
-			log.Fatalf("The client key already exists.  Please remove it or specify a different key/cert.")
-		}
-
-		if err := utils.GenerateCert([]string{""}, clientCertPath, clientKeyPath, caCertPath, caKeyPath, org, bits); err != nil {
-			log.Fatalf("Error generating client certificate: %s", err)
-		}
-	}
-
-	return nil
+	return h
 }
 
 var sharedCreateFlags = []cli.Flag{
@@ -410,20 +367,31 @@ var Commands = []cli.Command{
 	},
 }
 
+func printIP(h *host.Host) func() error {
+	return func() error {
+		if ip, err := h.Driver.GetIP(); err != nil {
+			return err
+		} else {
+			fmt.Println(ip)
+		}
+		return nil
+	}
+}
+
 // machineCommand maps the command name to the corresponding machine command.
 // We run commands concurrently and communicate back an error if there was one.
-func machineCommand(actionName string, host *libmachine.Host, errorChan chan<- error) {
+func machineCommand(actionName string, h *host.Host, errorChan chan<- error) {
 	commands := map[string](func() error){
-		"configureAuth": host.ConfigureAuth,
-		"start":         host.Start,
-		"stop":          host.Stop,
-		"restart":       host.Restart,
-		"kill":          host.Kill,
-		"upgrade":       host.Upgrade,
-		"ip":            host.PrintIP,
+		"configureAuth": h.ConfigureAuth,
+		"start":         h.Start,
+		"stop":          h.Stop,
+		"restart":       h.Restart,
+		"kill":          h.Kill,
+		"upgrade":       h.Upgrade,
+		"ip":            printIP(h),
 	}
 
-	log.Debugf("command=%s machine=%s", actionName, host.Name)
+	log.Debugf("command=%s machine=%s", actionName, h.Name)
 
 	if err := commands[actionName](); err != nil {
 		errorChan <- err
@@ -434,10 +402,10 @@ func machineCommand(actionName string, host *libmachine.Host, errorChan chan<- e
 }
 
 // runActionForeachMachine will run the command across multiple machines
-func runActionForeachMachine(actionName string, machines []*libmachine.Host) {
+func runActionForeachMachine(actionName string, machines []*host.Host) {
 	var (
 		numConcurrentActions = 0
-		serialMachines       = []*libmachine.Host{}
+		serialMachines       = []*host.Host{}
 		errorChan            = make(chan error)
 	)
 
@@ -480,185 +448,59 @@ func runActionForeachMachine(actionName string, machines []*libmachine.Host) {
 }
 
 func runActionWithContext(actionName string, c *cli.Context) error {
-	machines, err := getHosts(c)
+	store := getStore(c)
+
+	hosts, err := store.List()
 	if err != nil {
 		return err
 	}
 
-	if len(machines) == 0 {
+	if len(hosts) == 0 {
 		log.Fatal(ErrNoMachineSpecified)
 	}
 
-	runActionForeachMachine(actionName, machines)
+	runActionForeachMachine(actionName, hosts)
+
+	for _, h := range hosts {
+		if err := store.Save(h); err != nil {
+			return fmt.Errorf("Error saving host to store: %s", err)
+		}
+	}
 
 	return nil
 }
 
-func getHosts(c *cli.Context) ([]*libmachine.Host, error) {
-	machines := []*libmachine.Host{}
-	for _, n := range c.Args() {
-		machine, err := loadMachine(n, c)
-		if err != nil {
-			return nil, err
-		}
-
-		machines = append(machines, machine)
-	}
-
-	return machines, nil
-}
-
-func loadMachine(name string, c *cli.Context) (*libmachine.Host, error) {
-	certInfo := getCertPathInfo(c)
-	defaultStore, err := getDefaultStore(
-		c.GlobalString("storage-path"),
-		certInfo.CaCertPath,
-		certInfo.CaKeyPath,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	provider, err := newProvider(defaultStore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	host, err := provider.Get(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return host, nil
-}
-
-func getHost(c *cli.Context) *libmachine.Host {
-	name := c.Args().First()
-
-	defaultStore, err := getDefaultStore(
-		c.GlobalString("storage-path"),
-		c.GlobalString("tls-ca-cert"),
-		c.GlobalString("tls-ca-key"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	provider, err := newProvider(defaultStore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	host, err := provider.Get(name)
-	if err != nil {
-		log.Fatalf("unable to load host: %v", err)
-	}
-	return host
-}
-
-func getDefaultProvider(c *cli.Context) *libmachine.Provider {
-	certInfo := getCertPathInfo(c)
-	defaultStore, err := getDefaultStore(
-		c.GlobalString("storage-path"),
-		certInfo.CaCertPath,
-		certInfo.CaKeyPath,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	provider, err := newProvider(defaultStore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return provider
-}
-
-func getMachineConfig(c *cli.Context) (*machineConfig, error) {
-	name := c.Args().First()
-	certInfo := getCertPathInfo(c)
-	defaultStore, err := getDefaultStore(
-		c.GlobalString("storage-path"),
-		certInfo.CaCertPath,
-		certInfo.CaKeyPath,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	provider, err := newProvider(defaultStore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	m, err := provider.Get(name)
-	if err != nil {
-		return nil, err
-	}
-
-	machineDir := filepath.Join(utils.GetMachineDir(), m.Name)
-	caCert := filepath.Join(machineDir, "ca.pem")
-	caKey := filepath.Join(utils.GetMachineCertDir(), "ca-key.pem")
-	clientCert := filepath.Join(machineDir, "cert.pem")
-	clientKey := filepath.Join(machineDir, "key.pem")
-	serverCert := filepath.Join(machineDir, "server.pem")
-	serverKey := filepath.Join(machineDir, "server-key.pem")
-	machineUrl, err := m.GetURL()
-	if err != nil {
-		if err == drivers.ErrHostIsNotRunning {
-			machineUrl = ""
-		} else {
-			return nil, fmt.Errorf("Unexpected error getting machine url: %s", err)
-		}
-	}
-	return &machineConfig{
-		machineName:    name,
-		machineDir:     machineDir,
-		machineUrl:     machineUrl,
-		clientKeyPath:  clientKey,
-		clientCertPath: clientCert,
-		serverCertPath: serverCert,
-		caKeyPath:      caKey,
-		caCertPath:     caCert,
-		serverKeyPath:  serverKey,
-		AuthOptions:    *m.HostOptions.AuthOptions,
-		SwarmOptions:   *m.HostOptions.SwarmOptions,
-	}, nil
-}
-
-// getCertPaths returns the cert paths
-// codegangsta/cli will not set the cert paths if the storage-path
-// is set to something different so we cannot use the paths
-// in the global options. le sigh.
-func getCertPathInfo(c *cli.Context) libmachine.CertPathInfo {
-	// setup cert paths
+// Returns the cert paths.
+// codegangsta/cli will not set the cert paths if the storage-path is set to
+// something different so we cannot use the paths in the global options. le
+// sigh.
+func getCertPathInfoFromContext(c *cli.Context) cert.CertPathInfo {
 	caCertPath := c.GlobalString("tls-ca-cert")
 	caKeyPath := c.GlobalString("tls-ca-key")
 	clientCertPath := c.GlobalString("tls-client-cert")
 	clientKeyPath := c.GlobalString("tls-client-key")
 
 	if caCertPath == "" {
-		caCertPath = filepath.Join(utils.GetMachineCertDir(), "ca.pem")
+		caCertPath = filepath.Join(mcndirs.GetMachineCertDir(), "ca.pem")
 	}
 
 	if caKeyPath == "" {
-		caKeyPath = filepath.Join(utils.GetMachineCertDir(), "ca-key.pem")
+		caKeyPath = filepath.Join(mcndirs.GetMachineCertDir(), "ca-key.pem")
 	}
 
 	if clientCertPath == "" {
-		clientCertPath = filepath.Join(utils.GetMachineCertDir(), "cert.pem")
+		clientCertPath = filepath.Join(mcndirs.GetMachineCertDir(), "cert.pem")
 	}
 
 	if clientKeyPath == "" {
-		clientKeyPath = filepath.Join(utils.GetMachineCertDir(), "key.pem")
+		clientKeyPath = filepath.Join(mcndirs.GetMachineCertDir(), "key.pem")
 	}
 
-	return libmachine.CertPathInfo{
-		CaCertPath:     caCertPath,
-		CaKeyPath:      caKeyPath,
-		ClientCertPath: clientCertPath,
-		ClientKeyPath:  clientKeyPath,
+	return cert.CertPathInfo{
+		CaCertPath:       caCertPath,
+		CaPrivateKeyPath: caKeyPath,
+		ClientCertPath:   clientCertPath,
+		ClientKeyPath:    clientKeyPath,
 	}
 }
 
