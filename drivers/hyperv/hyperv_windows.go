@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 )
 
 type Driver struct {
@@ -148,53 +147,9 @@ func (d *Driver) Create() error {
 
 	var isoURL string
 
-	b2dutils := utils.NewB2dUtils("", "")
-
-	if d.boot2DockerLoc == "" {
-		if d.boot2DockerURL != "" {
-			isoURL = d.boot2DockerURL
-			log.Infof("Downloading boot2docker.iso from %s...", isoURL)
-			if err := b2dutils.DownloadISO(d.ResolveStorePath("."), "boot2docker.iso", isoURL); err != nil {
-				return err
-			}
-		} else {
-			// todo: check latest release URL, download if it's new
-			// until then always use "latest"
-			isoURL, err = b2dutils.GetLatestBoot2DockerReleaseURL()
-			if err != nil {
-				log.Warnf("Unable to check for the latest release: %s", err)
-
-			}
-			// todo: use real constant for .docker
-			rootPath := filepath.Join(utils.GetDockerDir())
-			imgPath := filepath.Join(rootPath, "images")
-			commonIsoPath := filepath.Join(imgPath, "boot2docker.iso")
-			if _, err := os.Stat(commonIsoPath); os.IsNotExist(err) {
-				log.Infof("Downloading boot2docker.iso to %s...", commonIsoPath)
-				// just in case boot2docker.iso has been manually deleted
-				if _, err := os.Stat(imgPath); os.IsNotExist(err) {
-					if err := os.Mkdir(imgPath, 0700); err != nil {
-						return err
-
-					}
-
-				}
-				if err := b2dutils.DownloadISO(imgPath, "boot2docker.iso", isoURL); err != nil {
-					return err
-
-				}
-
-			}
-			isoDest := d.ResolveStorePath("boot2docker.iso")
-			if err := utils.CopyFile(commonIsoPath, isoDest); err != nil {
-				return err
-
-			}
-		}
-	} else {
-		if err := utils.CopyFile(d.boot2DockerLoc, d.ResolveStorePath("boot2docker.iso")); err != nil {
-			return err
-		}
+	b2dutils := mcnutils.NewB2dUtils("", "", d.GlobalArtifactPath())
+	if err := b2dutils.CopyIsoToMachineDir(d.Boot2DockerURL, d.MachineName); err != nil {
+		return err
 	}
 
 	log.Infof("Creating SSH key...")
@@ -218,7 +173,7 @@ func (d *Driver) Create() error {
 	command := []string{
 		"New-VM",
 		"-Name", d.MachineName,
-		"-Path", fmt.Sprintf("'%s'", d.ResolveStorePath(".")),
+		"-Path", fmt.Sprintf("'%s'", d.LocalArtifactPath(".")),
 		"-MemoryStartupBytes", fmt.Sprintf("%dMB", d.memSize)}
 	_, err = execute(command)
 	if err != nil {
@@ -228,7 +183,7 @@ func (d *Driver) Create() error {
 	command = []string{
 		"Set-VMDvdDrive",
 		"-VMName", d.MachineName,
-		"-Path", fmt.Sprintf("'%s'", d.ResolveStorePath("boot2docker.iso"))}
+		"-Path", fmt.Sprintf("'%s'", d.LocalArtifactPath("boot2docker.iso"))}
 	_, err = execute(command)
 	if err != nil {
 		return err
@@ -412,8 +367,8 @@ func (d *Driver) generateDiskImage() error {
 	// Create a small fixed vhd, put the tar in,
 	// convert to dynamic, then resize
 
-	d.diskImage = d.ResolveStorePath("disk.vhd")
-	fixed := d.ResolveStorePath("fixed.vhd")
+	d.diskImage = d.LocalArtifactPath("disk.vhd")
+	fixed := d.LocalArtifactPath("fixed.vhd")
 	log.Infof("Creating VHD")
 	command := []string{
 		"New-VHD",

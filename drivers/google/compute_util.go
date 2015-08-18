@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/ssh"
 	raw "google.golang.org/api/compute/v1"
 )
 
@@ -43,7 +43,7 @@ const (
 
 // NewComputeUtil creates and initializes a ComputeUtil.
 func newComputeUtil(driver *Driver) (*ComputeUtil, error) {
-	service, err := newGCEService(driver.ResolveStorePath("."), driver.AuthTokenPath)
+	service, err := newGCEService(driver.LocalArtifactPath("."), driver.AuthTokenPath)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (c *ComputeUtil) staticAddress() (string, error) {
 		return "", err
 	}
 
-	if (!isName) {
+	if !isName {
 		return c.address, nil
 	}
 
@@ -110,7 +110,7 @@ func (c *ComputeUtil) staticAddress() (string, error) {
 	return externalAddress.Address, nil
 }
 
-func (c *ComputeUtil) region() (string) {
+func (c *ComputeUtil) region() string {
 	return c.zone[:len(c.zone)-2]
 }
 

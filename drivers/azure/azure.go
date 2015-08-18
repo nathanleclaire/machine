@@ -11,11 +11,11 @@ import (
 	"github.com/MSOpenTech/azure-sdk-for-go/clients/vmClient"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/ssh"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/ssh"
+	"github.com/docker/machine/libmachine/state"
 )
 
 type Driver struct {
@@ -33,7 +33,6 @@ type Driver struct {
 
 func init() {
 	drivers.Register("azure", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -102,9 +101,13 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	d := &Driver{BaseDriver: inner}
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	d := &Driver{
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}
 	return d, nil
 }
 
@@ -368,7 +371,7 @@ func (d *Driver) Kill() error {
 }
 
 func generateVMName() string {
-	randomID := utils.TruncateID(utils.GenerateRandomID())
+	randomID := mcnutils.TruncateID(mcnutils.GenerateRandomID())
 	return fmt.Sprintf("docker-host-%s", randomID)
 }
 
@@ -420,7 +423,7 @@ func (d *Driver) generateCertForAzure() error {
 }
 
 func (d *Driver) azureCertPath() string {
-	return d.ResolveStorePath("azure_cert.pem")
+	return d.LocalArtifactPath("azure_cert.pem")
 }
 
 func (d *Driver) getHostname() string {

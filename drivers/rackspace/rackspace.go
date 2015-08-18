@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/drivers/openstack"
-	"github.com/docker/machine/log"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
 )
 
 // Driver is a machine driver for Rackspace. It's a specialization of the generic OpenStack one.
@@ -18,7 +18,6 @@ type Driver struct {
 
 func init() {
 	drivers.Register("rackspace", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -80,23 +79,17 @@ func GetCreateFlags() []cli.Flag {
 }
 
 // NewDriver instantiates a Rackspace driver.
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
+func NewDriver(machineName, artifactPath string) (drivers.Driver, error) {
 	log.WithFields(log.Fields{
 		"machineName": machineName,
-		"storePath":   storePath,
-		"caCert":      caCert,
-		"privateKey":  privateKey,
 	}).Debug("Instantiating Rackspace driver.")
 
-	client := &Client{}
-	inner, err := openstack.NewDerivedDriver(machineName, storePath, client, caCert, privateKey)
+	inner, err := openstack.NewDerivedDriver(machineName, artifactPath)
 	if err != nil {
 		return nil, err
 	}
 
-	driver := &Driver{Driver: inner}
-	client.driver = driver
-	return driver, nil
+	return &Driver{Driver: inner}, nil
 }
 
 // DriverName is the user-visible name of this driver.

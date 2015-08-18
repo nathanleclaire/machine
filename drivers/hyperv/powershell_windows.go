@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/machine/log"
+	"github.com/docker/machine/libmachine/log"
 )
 
 var powershell string

@@ -74,13 +74,13 @@ func getDefaultTestDriverFlags() *DriverOptionsMock {
 }
 
 func getTestDriver() (*Driver, error) {
-	storePath, err := getTestStorePath()
+	artifactPath, err := getTestStorePath()
 	if err != nil {
 		return nil, err
 	}
 	defer cleanup()
 
-	d, err := NewDriver(machineTestName, storePath, machineTestCaCert, machineTestPrivateKey)
+	d, err := NewDriver(machineTestName, artifactPath)
 	if err != nil {
 		return nil, err
 	}

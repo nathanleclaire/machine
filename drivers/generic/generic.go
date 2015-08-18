@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
-	"github.com/docker/machine/log"
-	"github.com/docker/machine/state"
-	"github.com/docker/machine/utils"
+	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnutils"
+	"github.com/docker/machine/libmachine/state"
 )
 
 type Driver struct {
@@ -25,7 +25,6 @@ const (
 
 func init() {
 	drivers.Register("generic", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -47,7 +46,7 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "generic-ssh-key",
 			Usage: "SSH private key path",
-			Value: filepath.Join(utils.GetHomeDir(), ".ssh", "id_rsa"),
+			Value: filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa"),
 		},
 		cli.IntFlag{
 			Name:  "generic-ssh-port",
@@ -57,9 +56,13 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	return &Driver{BaseDriver: inner}, nil
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	return &Driver{
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}, nil
 }
 
 func (d *Driver) DriverName() string {
@@ -98,7 +101,7 @@ func (d *Driver) PreCreateCheck() error {
 func (d *Driver) Create() error {
 	log.Infof("Importing SSH key...")
 
-	if err := utils.CopyFile(d.SSHKey, d.GetSSHKeyPath()); err != nil {
+	if err := mcnutils.CopyFile(d.SSHKey, d.GetSSHKeyPath()); err != nil {
 		return fmt.Errorf("unable to copy ssh key: %s", err)
 	}
 
