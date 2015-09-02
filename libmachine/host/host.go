@@ -30,6 +30,7 @@ type Host struct {
 	DriverName    string
 	HostOptions   *HostOptions
 	Name          string
+	RawDriver     []byte
 }
 
 type HostOptions struct {

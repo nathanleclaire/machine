@@ -20,7 +20,7 @@ func cmdSsh(c *cli.Context) {
 	}
 
 	store := getStore(c)
-	host, err := store.Load(name)
+	host, err := loadHost(store, name)
 	if err != nil {
 		log.Fatal(err)
 	}

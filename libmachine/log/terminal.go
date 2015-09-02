@@ -94,10 +94,12 @@ func (t StandardLogger) Printf(fmtString string, args ...interface{}) {
 }
 
 func (t StandardLogger) Warn(args ...interface{}) {
+	fmt.Print("WARNING >>> ")
 	t.log(args...)
 }
 
 func (t StandardLogger) Warnf(fmtString string, args ...interface{}) {
+	fmt.Print("WARNING >>> ")
 	t.logf(fmtString, args...)
 }
 

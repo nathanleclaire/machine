@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/drivers/rpc"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/docker/machine/libmachine/swarm"
 	"github.com/skarademir/naturalsort"
@@ -34,6 +34,7 @@ import (
 
 	"github.com/docker/machine/commands/mcndirs"
 	"github.com/docker/machine/libmachine/cert"
+	"github.com/docker/machine/libmachine/drivers/plugin"
 	"github.com/docker/machine/libmachine/host"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/persist"
@@ -100,10 +101,86 @@ func getStore(c *cli.Context) persist.Store {
 	}
 }
 
+func newPluginDriver(driverName string, rawContent []byte) (*rpcdriver.RpcClientDriver, error) {
+	p := &plugin.LocalBinaryPlugin{}
+
+	if err := p.Serve(driverName); err != nil {
+		return nil, fmt.Errorf("Error attempting to serve plugin: %s", err)
+	}
+
+	addr, err := p.Address()
+	if err != nil {
+		return nil, fmt.Errorf("Error attempting to get plugin server address for RPC: %s", err)
+	}
+
+	d, err := rpcdriver.NewRpcClientDriver(rawContent, addr)
+	if err != nil {
+		return nil, fmt.Errorf("Error attempting to get client driver for RPC: %s", err)
+	}
+
+	return d, nil
+}
+
+func listHosts(store persist.Store) ([]*host.Host, error) {
+	cliHosts := []*host.Host{}
+
+	hosts, err := store.List()
+	if err != nil {
+		return nil, fmt.Errorf("Error attempting to list hosts from store: %s")
+	}
+
+	for _, h := range hosts {
+		d, err := newPluginDriver(h.DriverName, h.RawDriver)
+		if err != nil {
+			return nil, fmt.Errorf("Error attempting to invoke binary for plugin: %s", err)
+		}
+
+		h.Driver = d
+
+		cliHosts = append(cliHosts, h)
+	}
+
+	return cliHosts, nil
+}
+
+func loadHost(store persist.Store, hostName string) (*host.Host, error) {
+	h, err := store.Load(hostName)
+	if err != nil {
+		return nil, fmt.Errorf("Error attempting to load host from store: %s", err)
+	}
+
+	d, err := newPluginDriver(h.DriverName, h.RawDriver)
+	if err != nil {
+		return nil, fmt.Errorf("Error attempting to invoke binary for plugin: %s", err)
+	}
+
+	h.Driver = d
+
+	return h, nil
+}
+
+func saveHost(store persist.Store, h *host.Host) error {
+	if err := store.Save(h); err != nil {
+		return fmt.Errorf("Error attempting to save host to store: %s")
+	}
+
+	return nil
+}
+
 func getFirstArgHost(c *cli.Context) *host.Host {
 	store := getStore(c)
 	hostName := c.Args().First()
-	h, err := store.Load(hostName)
+
+	exists, err := store.Exists(hostName)
+	if err != nil {
+		log.Fatalf("Error checking if host %q exists: %s", hostName, err)
+	}
+
+	if !exists {
+		log.Fatalf("Host %q does not exist", hostName)
+	}
+
+	h, err := loadHost(store, hostName)
 	if err != nil {
 		// I guess I feel OK with bailing here since if we can't get
 		// the host reliably we're definitely not going to be able to
@@ -118,8 +195,7 @@ var sharedCreateFlags = []cli.Flag{
 	cli.StringFlag{
 		Name: "driver, d",
 		Usage: fmt.Sprintf(
-			"Driver to create machine with. Available drivers: %s",
-			strings.Join(drivers.GetDriverNames(), ", "),
+			"Driver to create machine with.",
 		),
 		Value: "none",
 	},
@@ -218,10 +294,7 @@ var Commands = []cli.Command{
 		},
 	},
 	{
-		Flags: append(
-			drivers.GetCreateFlags(),
-			sharedCreateFlags...,
-		),
+		Flags:  sharedCreateFlags,
 		Name:   "create",
 		Usage:  "Create a machine",
 		Action: cmdCreate,
@@ -393,12 +466,7 @@ func machineCommand(actionName string, h *host.Host, errorChan chan<- error) {
 
 	log.Debugf("command=%s machine=%s", actionName, h.Name)
 
-	if err := commands[actionName](); err != nil {
-		errorChan <- err
-		return
-	}
-
-	errorChan <- nil
+	errorChan <- commands[actionName]()
 }
 
 // runActionForeachMachine will run the command across multiple machines
@@ -450,7 +518,7 @@ func runActionForeachMachine(actionName string, machines []*host.Host) {
 func runActionWithContext(actionName string, c *cli.Context) error {
 	store := getStore(c)
 
-	hosts, err := store.List()
+	hosts, err := listHosts(store)
 	if err != nil {
 		return err
 	}
@@ -462,7 +530,7 @@ func runActionWithContext(actionName string, c *cli.Context) error {
 	runActionForeachMachine(actionName, hosts)
 
 	for _, h := range hosts {
-		if err := store.Save(h); err != nil {
+		if err := saveHost(store, h); err != nil {
 			return fmt.Errorf("Error saving host to store: %s", err)
 		}
 	}

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	neturl "net/url"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/state"
 )
 
@@ -17,27 +17,21 @@ type Driver struct {
 	URL string
 }
 
-func init() {
-	drivers.Register("none", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:  "url",
-			Usage: "URL of host when no driver is selected",
-			Value: "",
-		},
-	}
-}
-
 func NewDriver(hostName, artifactPath string) Driver {
 	return Driver{
 		BaseDriver: &drivers.BaseDriver{
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
+		},
+	}
+}
+
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		mcnflag.Flag{
+			Name:  "url",
+			Usage: "URL of host when no driver is selected",
+			Value: "",
 		},
 	}
 }

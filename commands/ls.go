@@ -33,7 +33,7 @@ func cmdLs(c *cli.Context) {
 	}
 
 	store := getStore(c)
-	hostList, err := store.List()
+	hostList, err := listHosts(store)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func matchesName(host *host.Host, names []string) bool {
 }
 
 func getActiveHost(store persist.Store) (*host.Host, error) {
-	hosts, err := store.List()
+	hosts, err := listHosts(store)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func getActiveHost(store persist.Store) (*host.Host, error) {
 
 	for _, item := range hostListItems {
 		if item.Active {
-			h, err := store.Load(item.Name)
+			h, err := loadHost(store, item.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -241,7 +241,7 @@ func attemptGetHostState(h *host.Host, stateQueryChan chan<- HostListItem) {
 
 	url, err := h.GetURL()
 	if err != nil {
-		if err == drivers.ErrHostIsNotRunning {
+		if err.Error() == drivers.ErrHostIsNotRunning.Error() {
 			url = ""
 		} else {
 			log.Errorf("error getting URL for host %s: %s", h.Name, err)
@@ -307,7 +307,6 @@ func getHostListItems(hostList []*host.Host) []HostListItem {
 // based on both the url and if the host is stopped.
 func isActive(h *host.Host) (bool, error) {
 	currentState, err := h.Driver.GetState()
-
 	if err != nil {
 		log.Errorf("error getting state for host %s: %s", h.Name, err)
 		return false, err
@@ -316,7 +315,7 @@ func isActive(h *host.Host) (bool, error) {
 	url, err := h.GetURL()
 
 	if err != nil {
-		if err == drivers.ErrHostIsNotRunning {
+		if err.Error() == drivers.ErrHostIsNotRunning.Error() {
 			url = ""
 		} else {
 			log.Errorf("error getting URL for host %s: %s", h.Name, err)

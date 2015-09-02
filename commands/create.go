@@ -1,21 +1,25 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/machine/commands/mcndirs"
-	"github.com/docker/machine/drivers/driverfactory"
 	"github.com/docker/machine/libmachine"
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/drivers/rpc"
 	"github.com/docker/machine/libmachine/engine"
 	"github.com/docker/machine/libmachine/host"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnerror"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/persist"
 	"github.com/docker/machine/libmachine/swarm"
 )
@@ -25,36 +29,15 @@ var (
 )
 
 func cmdCreate(c *cli.Context) {
-	var (
-		driver drivers.Driver
-	)
-
 	driverName := c.String("driver")
 	name := c.Args().First()
+
 	certInfo := getCertPathInfoFromContext(c)
+
 	store := &persist.Filestore{
 		Path:             c.GlobalString("storage-path"),
 		CaCertPath:       certInfo.CaCertPath,
 		CaPrivateKeyPath: certInfo.CaPrivateKeyPath,
-	}
-
-	// TODO: Not really a fan of "none" as the default driver...
-	if driverName != "none" {
-		var err error
-
-		c.App.Commands, err = trimDriverFlags(driverName, c.App.Commands)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	if name == "" {
-		cli.ShowCommandHelp(c, "create")
-		log.Fatal("You must specify a machine name")
-	}
-
-	if err := validateSwarmDiscovery(c.String("swarm-discovery")); err != nil {
-		log.Fatalf("Error parsing swarm discovery: %s", err)
 	}
 
 	hostOptions := &host.HostOptions{
@@ -89,9 +72,50 @@ func cmdCreate(c *cli.Context) {
 		},
 	}
 
-	driver, err := driverfactory.NewDriver(driverName, name, c.GlobalString("storage-path"))
+	// TODO: Fix hacky JSON solution
+	bareDriverData, err := json.Marshal(&drivers.BaseDriver{
+		MachineName:  name,
+		ArtifactPath: c.GlobalString("storage-path"),
+	})
 	if err != nil {
-		log.Fatalf("Error trying to get driver: %s", err)
+		log.Fatalf("Error attempting to marshal bare driver data: %s", err)
+	}
+
+	driver, err := newPluginDriver(driverName, bareDriverData)
+	if err != nil {
+		log.Fatalf("Error loading driver %q: %s", driverName, err)
+	}
+
+	// TODO: So much flag manipulation and voodoo here, it seems to be
+	// asking for trouble.
+	//
+	// driverOpts is the actual data we send over the wire to set the
+	// driver parameters (an interface fulfilling drivers.DriverOptions,
+	// concrete type rpcdriver.RpcFlags).
+	//
+	// mcnFlags is the data we get back over the wire (type
+	// mcnflag.Flag) to indicate which parameters are available.
+	mcnFlags := driver.GetCreateFlags()
+	driverOpts := getDriverOpts(c, mcnFlags)
+
+	// This bit will actually make "create" display the correct flags based
+	// on the requested driver.
+	if driverName != "none" {
+		// TODO: Fix this, it doesn't work
+		cliFlags, err := convertMcnFlagsToCliFlags(mcnFlags)
+		if err != nil {
+			log.Fatalf("Error trying to convert provided driver flags to cli flags: %s", err)
+		}
+		c.Command = addDriverFlagsToCommand(cliFlags, c.Command)
+	}
+
+	if name == "" {
+		cli.ShowCommandHelp(c, "create")
+		log.Fatal("You must specify a machine name")
+	}
+
+	if err := validateSwarmDiscovery(c.String("swarm-discovery")); err != nil {
+		log.Fatalf("Error parsing swarm discovery: %s", err)
 	}
 
 	h, err := store.NewHost(driver)
@@ -109,9 +133,7 @@ func cmdCreate(c *cli.Context) {
 		log.Fatal(mcnerror.ErrHostAlreadyExists{h.Name})
 	}
 
-	// TODO: This should be moved out of the driver and done in the
-	// commands module.
-	if err := h.Driver.SetConfigFromFlags(c); err != nil {
+	if err := h.Driver.SetConfigFromFlags(driverOpts); err != nil {
 		log.Fatalf("Error setting machine configuration from flags provided: %s", err)
 	}
 
@@ -119,27 +141,99 @@ func cmdCreate(c *cli.Context) {
 		log.Fatal(err)
 	}
 
+	if err := saveHost(store, h); err != nil {
+		log.Fatalf("Error attempting to save store: %s", err)
+	}
+
 	info := fmt.Sprintf("%s env %s", c.App.Name, name)
 	log.Infof("To see how to connect Docker to this machine, run: %s", info)
 }
 
-// If the user has specified a driver, they should not see the flags for all
-// of the drivers in `docker-machine create`.  This method replaces the 100+
-// create flags with only the ones applicable to the driver specified
-func trimDriverFlags(driver string, cmds []cli.Command) ([]cli.Command, error) {
-	filteredCmds := cmds
-	driverFlags, err := drivers.GetCreateFlagsForDriver(driver)
-	if err != nil {
-		return nil, err
+func getDriverOpts(c *cli.Context, mcnflags []mcnflag.Flag) drivers.DriverOptions {
+	// TODO: This function is pretty damn YOLO and would benefit from some
+	// sanity checking around types and assertions.
+	//
+	// But, we need it so that we can actually send the flags for creating
+	// a machine over the wire (cli.Context is a no go since there is so
+	// much stuff in it).
+	driverOpts := rpcdriver.RpcFlags{
+		Values: make(map[string]interface{}),
 	}
 
-	for i, cmd := range cmds {
-		if cmd.HasName("create") {
-			filteredCmds[i].Flags = append(driverFlags, sharedCreateFlags...)
+	for _, name := range c.FlagNames() {
+		getter, ok := c.Generic(name).(flag.Getter)
+		if !ok {
+			// TODO: This is pretty hacky.  StringSlice is the only
+			// type so far we have to worry about which is not a
+			// Getter, though.
+			driverOpts.Values[name] = c.StringSlice(name)
+			continue
+		}
+		driverOpts.Values[name] = getter.Get()
+	}
+
+	for _, f := range mcnflags {
+		driverOpts.Values[f.Name] = f.Value
+
+		// Hardcoded logic for boolean... :(
+		if f.Value == nil {
+			driverOpts.Values[f.Name] = false
 		}
 	}
 
-	return filteredCmds, nil
+	return driverOpts
+}
+
+func convertMcnFlagsToCliFlags(mcnFlags []mcnflag.Flag) ([]cli.Flag, error) {
+	cliFlags := []cli.Flag{}
+	for _, f := range mcnFlags {
+		switch t := f.Value.(type) {
+		// TODO: It seems pretty wrong to just default "nil" to this,
+		// but cli.BoolFlag doesn't have a "Value" field (false is
+		// always the default)
+		case nil:
+			cliFlags = append(cliFlags, cli.BoolFlag{
+				Name:   f.Name,
+				EnvVar: f.EnvVar,
+				Usage:  f.Usage,
+			})
+		case int:
+			cliFlags = append(cliFlags, cli.IntFlag{
+				Name:   f.Name,
+				EnvVar: f.EnvVar,
+				Usage:  f.Usage,
+				Value:  f.Value.(int),
+			})
+		case string:
+			cliFlags = append(cliFlags, cli.StringFlag{
+				Name:   f.Name,
+				EnvVar: f.EnvVar,
+				Usage:  f.Usage,
+				Value:  f.Value.(string),
+			})
+		case []string:
+			cliFlags = append(cliFlags, cli.StringSliceFlag{
+				Name:   f.Name,
+				EnvVar: f.EnvVar,
+				Usage:  f.Usage,
+
+				//TODO: Is this used with defaults? Can we convert the literal []string to cli.StringSlice properly?
+				Value: &cli.StringSlice{},
+			})
+		default:
+			log.Warn("Flag is ", f)
+			return nil, fmt.Errorf("Flag is unrecognized flag type: %T", t)
+		}
+	}
+
+	return cliFlags, nil
+}
+
+func addDriverFlagsToCommand(cliFlags []cli.Flag, cmd cli.Command) cli.Command {
+	cmd.Flags = append(sharedCreateFlags, cliFlags...)
+	sort.Sort(ByFlagName(cmd.Flags))
+
+	return cmd
 }
 
 func validateSwarmDiscovery(discovery string) error {

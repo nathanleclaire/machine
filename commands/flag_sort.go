@@ -1,4 +1,4 @@
-package drivers
+package commands
 
 import "github.com/codegangsta/cli"
 

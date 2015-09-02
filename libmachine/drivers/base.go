@@ -20,16 +20,6 @@ func (d *BaseDriver) GetSSHKeyPath() string {
 	return filepath.Join(d.ArtifactPath, "machines", d.MachineName, "id_rsa")
 }
 
-// AuthorizePort -
-func (d *BaseDriver) AuthorizePort(ports []*Port) error {
-	return nil
-}
-
-// DeauthorizePort -
-func (d *BaseDriver) DeauthorizePort(ports []*Port) error {
-	return nil
-}
-
 // DriverName - This must be implemented in every driver
 func (d *BaseDriver) DriverName() string {
 	return "unknown"
