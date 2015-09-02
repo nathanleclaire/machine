@@ -7,6 +7,11 @@ $output
 ----------
 
 "   >> ${BATS_LOG}
+    pgrep docker-machine
+    if [[ "$?" -ne 0 ]]; then
+        errecho "FAILURE: This test has leaked processes."
+        exit 1
+    fi
 }
 
 function errecho () {

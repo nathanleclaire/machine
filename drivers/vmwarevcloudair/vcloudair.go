@@ -11,9 +11,9 @@ import (
 
 	"github.com/vmware/govcloudair"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
@@ -31,7 +31,6 @@ type Driver struct {
 	Catalog      string
 	CatalogItem  string
 	DockerPort   int
-	Provision    bool
 	CPUCount     int
 	MemorySize   int
 	VAppID       string
@@ -54,82 +53,75 @@ func init() {
 
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			EnvVar: "VCLOUDAIR_USERNAME",
 			Name:   "vmwarevcloudair-username",
 			Usage:  "vCloud Air username",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_PASSWORD",
 			Name:   "vmwarevcloudair-password",
 			Usage:  "vCloud Air password",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_COMPUTEID",
 			Name:   "vmwarevcloudair-computeid",
 			Usage:  "vCloud Air Compute ID (if using Dedicated Cloud)",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_VDCID",
 			Name:   "vmwarevcloudair-vdcid",
 			Usage:  "vCloud Air VDC ID",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_ORGVDCNETWORK",
 			Name:   "vmwarevcloudair-orgvdcnetwork",
 			Usage:  "vCloud Air Org VDC Network (Default is <vdcid>-default-routed)",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_EDGEGATEWAY",
 			Name:   "vmwarevcloudair-edgegateway",
 			Usage:  "vCloud Air Org Edge Gateway (Default is <vdcid>)",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_PUBLICIP",
 			Name:   "vmwarevcloudair-publicip",
 			Usage:  "vCloud Air Org Public IP to use",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_CATALOG",
 			Name:   "vmwarevcloudair-catalog",
 			Usage:  "vCloud Air Catalog (default is Public Catalog)",
 			Value:  defaultCatalog,
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VCLOUDAIR_CATALOGITEM",
 			Name:   "vmwarevcloudair-catalogitem",
 			Usage:  "vCloud Air Catalog Item (default is Ubuntu Precise)",
 			Value:  defaultCatalogItem,
 		},
 
-		// BoolTFlag is true by default.
-		cli.BoolTFlag{
-			EnvVar: "VCLOUDAIR_PROVISION",
-			Name:   "vmwarevcloudair-provision",
-			Usage:  "vCloud Air Install Docker binaries (default is true)",
-		},
-
-		cli.IntFlag{
+		{
 			EnvVar: "VCLOUDAIR_CPU_COUNT",
 			Name:   "vmwarevcloudair-cpu-count",
 			Usage:  "vCloud Air VM Cpu Count (default 1)",
 			Value:  defaultCpus,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "VCLOUDAIR_MEMORY_SIZE",
 			Name:   "vmwarevcloudair-memory-size",
 			Usage:  "vCloud Air VM Memory Size in MB (default 2048)",
 			Value:  defaultMemory,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "VCLOUDAIR_SSH_PORT",
 			Name:   "vmwarevcloudair-ssh-port",
 			Usage:  "vCloud Air SSH port",
 			Value:  defaultSSHPort,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "VCLOUDAIR_DOCKER_PORT",
 			Name:   "vmwarevcloudair-docker-port",
 			Usage:  "vCloud Air Docker port",
@@ -204,7 +196,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.DockerPort = flags.Int("vmwarevcloudair-docker-port")
 	d.SSHUser = "root"
 	d.SSHPort = flags.Int("vmwarevcloudair-ssh-port")
-	d.Provision = flags.Bool("vmwarevcloudair-provision")
 	d.CPUCount = flags.Int("vmwarevcloudair-cpu-count")
 	d.MemorySize = flags.Int("vmwarevcloudair-memory-size")
 

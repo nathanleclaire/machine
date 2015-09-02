@@ -6,9 +6,7 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/docker/machine/libmachine/log"
-
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 )
 
 var funcMap = template.FuncMap{
@@ -33,26 +31,26 @@ func cmdInspect(c *cli.Context) {
 		var tmpl *template.Template
 		var err error
 		if tmpl, err = template.New("").Funcs(funcMap).Parse(tmplString); err != nil {
-			log.Fatalf("Template parsing error: %v\n", err)
+			fatalf("Template parsing error: %v\n", err)
 		}
 
 		jsonHost, err := json.Marshal(getFirstArgHost(c))
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 		obj := make(map[string]interface{})
 		if err := json.Unmarshal(jsonHost, &obj); err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 
 		if err := tmpl.Execute(os.Stdout, obj); err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 		os.Stdout.Write([]byte{'\n'})
 	} else {
 		prettyJSON, err := json.MarshalIndent(getFirstArgHost(c), "", "    ")
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 
 		fmt.Println(string(prettyJSON))

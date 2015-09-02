@@ -3,26 +3,26 @@ package drivers
 import (
 	"testing"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/libmachine/mcnflag"
 )
 
 func TestGetCreateFlags(t *testing.T) {
 	Register("foo", &RegisteredDriver{
-		GetCreateFlags: func() []cli.Flag {
-			return []cli.Flag{
-				cli.StringFlag{
+		GetCreateFlags: func() []mcnflag.Flag {
+			return []mcnflag.Flag{
+				{
 					Name:   "a",
 					Value:  "",
 					Usage:  "",
 					EnvVar: "",
 				},
-				cli.StringFlag{
+				{
 					Name:   "b",
 					Value:  "",
 					Usage:  "",
 					EnvVar: "",
 				},
-				cli.StringFlag{
+				{
 					Name:   "c",
 					Value:  "",
 					Usage:  "",
@@ -32,21 +32,21 @@ func TestGetCreateFlags(t *testing.T) {
 		},
 	})
 	Register("bar", &RegisteredDriver{
-		GetCreateFlags: func() []cli.Flag {
-			return []cli.Flag{
-				cli.StringFlag{
+		GetCreateFlags: func() []mcnflag.Flag {
+			return []mcnflag.Flag{
+				{
 					Name:   "d",
 					Value:  "",
 					Usage:  "",
 					EnvVar: "",
 				},
-				cli.StringFlag{
+				{
 					Name:   "e",
 					Value:  "",
 					Usage:  "",
 					EnvVar: "",
 				},
-				cli.StringFlag{
+				{
 					Name:   "f",
 					Value:  "",
 					Usage:  "",

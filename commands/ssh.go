@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/state"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 )
 
 func cmdSsh(c *cli.Context) {
@@ -15,33 +14,33 @@ func cmdSsh(c *cli.Context) {
 	name := args.First()
 
 	if name == "" {
-		log.Fatal("Error: Please specify a machine name.")
+		fatal("Error: Please specify a machine name.")
 	}
 
 	store := getStore(c)
-	host, err := store.Load(name)
+	host, err := loadHost(store, name)
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 
 	currentState, err := host.Driver.GetState()
 	if err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
 
 	if currentState != state.Running {
-		log.Fatalf("Error: Cannot run SSH command: Host %q is not running", host.Name)
+		fatalf("Error: Cannot run SSH command: Host %q is not running", host.Name)
 	}
 
 	if len(c.Args()) == 1 {
 		err := host.CreateSSHShell()
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 	} else {
 		output, err := host.RunSSHCommand(strings.Join(c.Args().Tail(), " "))
 		if err != nil {
-			log.Fatal(err)
+			fatal(err)
 		}
 
 		fmt.Print(output)
