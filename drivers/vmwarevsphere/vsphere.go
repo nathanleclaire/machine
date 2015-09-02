@@ -15,9 +15,9 @@ import (
 
 	"github.com/docker/machine/libmachine/log"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/drivers/vmwarevsphere/errors"
 	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
@@ -56,67 +56,67 @@ func init() {
 
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.IntFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			EnvVar: "VSPHERE_CPU_COUNT",
 			Name:   "vmwarevsphere-cpu-count",
 			Usage:  "vSphere CPU number for docker VM",
 			Value:  2,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "VSPHERE_MEMORY_SIZE",
 			Name:   "vmwarevsphere-memory-size",
 			Usage:  "vSphere size of memory for docker VM (in MB)",
 			Value:  2048,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "VSPHERE_DISK_SIZE",
 			Name:   "vmwarevsphere-disk-size",
 			Usage:  "vSphere size of disk for docker VM (in MB)",
 			Value:  20000,
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_BOOT2DOCKER_URL",
 			Name:   "vmwarevsphere-boot2docker-url",
 			Usage:  "vSphere URL for boot2docker image",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_VCENTER",
 			Name:   "vmwarevsphere-vcenter",
 			Usage:  "vSphere IP/hostname for vCenter",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_USERNAME",
 			Name:   "vmwarevsphere-username",
 			Usage:  "vSphere username",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_PASSWORD",
 			Name:   "vmwarevsphere-password",
 			Usage:  "vSphere password",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_NETWORK",
 			Name:   "vmwarevsphere-network",
 			Usage:  "vSphere network where the docker VM will be attached",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_DATASTORE",
 			Name:   "vmwarevsphere-datastore",
 			Usage:  "vSphere datastore for docker VM",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_DATACENTER",
 			Name:   "vmwarevsphere-datacenter",
 			Usage:  "vSphere datacenter for docker VM",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_POOL",
 			Name:   "vmwarevsphere-pool",
 			Usage:  "vSphere resource pool for docker VM",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "VSPHERE_COMPUTE_IP",
 			Name:   "vmwarevsphere-compute-ip",
 			Usage:  "vSphere compute host IP where the docker VM will be instantiated",

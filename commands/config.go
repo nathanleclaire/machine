@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/cert"
 	"github.com/docker/machine/libmachine/host"

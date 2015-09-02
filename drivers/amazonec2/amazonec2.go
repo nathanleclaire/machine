@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/drivers/amazonec2/amz"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
@@ -69,102 +69,102 @@ func init() {
 	})
 }
 
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			Name:   "amazonec2-access-key",
 			Usage:  "AWS Access Key",
 			Value:  "",
 			EnvVar: "AWS_ACCESS_KEY_ID",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-secret-key",
 			Usage:  "AWS Secret Key",
 			Value:  "",
 			EnvVar: "AWS_SECRET_ACCESS_KEY",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-session-token",
 			Usage:  "AWS Session Token",
 			Value:  "",
 			EnvVar: "AWS_SESSION_TOKEN",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-ami",
 			Usage:  "AWS machine image",
 			EnvVar: "AWS_AMI",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-region",
 			Usage:  "AWS region",
 			Value:  defaultRegion,
 			EnvVar: "AWS_DEFAULT_REGION",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-vpc-id",
 			Usage:  "AWS VPC id",
 			Value:  "",
 			EnvVar: "AWS_VPC_ID",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-zone",
 			Usage:  "AWS zone for instance (i.e. a,b,c,d,e)",
 			Value:  "a",
 			EnvVar: "AWS_ZONE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-subnet-id",
 			Usage:  "AWS VPC subnet id",
 			Value:  "",
 			EnvVar: "AWS_SUBNET_ID",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-security-group",
 			Usage:  "AWS VPC security group",
 			Value:  "docker-machine",
 			EnvVar: "AWS_SECURITY_GROUP",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-instance-type",
 			Usage:  "AWS instance type",
 			Value:  defaultInstanceType,
 			EnvVar: "AWS_INSTANCE_TYPE",
 		},
-		cli.IntFlag{
+		{
 			Name:   "amazonec2-root-size",
 			Usage:  "AWS root disk size (in GB)",
 			Value:  defaultRootSize,
 			EnvVar: "AWS_ROOT_SIZE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-iam-instance-profile",
 			Usage:  "AWS IAM Instance Profile",
 			EnvVar: "AWS_INSTANCE_PROFILE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "amazonec2-ssh-user",
 			Usage:  "set the name of the ssh user",
 			Value:  "ubuntu",
 			EnvVar: "AWS_SSH_USER",
 		},
-		cli.BoolFlag{
+		{
 			Name:  "amazonec2-request-spot-instance",
 			Usage: "Set this flag to request spot instance",
 		},
-		cli.StringFlag{
+		{
 			Name:  "amazonec2-spot-price",
 			Usage: "AWS spot instance bid price (in dollar)",
 			Value: "0.50",
 		},
-		cli.BoolFlag{
+		{
 			Name:  "amazonec2-private-address-only",
 			Usage: "Only use a private IP address",
 		},
-		cli.BoolFlag{
+		{
 			Name:  "amazonec2-use-private-address",
 			Usage: "Force the usage of private IP address",
 		},
-		cli.BoolFlag{
+		{
 			Name:  "amazonec2-monitoring",
 			Usage: "Set this flag to enable CloudWatch monitoring",
 		},

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/machine/drivers/driverfactory"
+	"github.com/docker/machine/drivers/none"
 	"github.com/docker/machine/libmachine/version"
 )
 
@@ -33,22 +33,10 @@ func MigrateHost(h *Host, data []byte) (*Host, bool, error) {
 		return &Host{}, false, err
 	}
 
-	// Don't need to specify store path here since it will be read from the
-	// data.
-	//
-	// TODO: Should not call driverfactory.NewDriver (a method outside of
-	// libmachine) from inside libmachine.
-	driver, err := driverfactory.NewDriver(migratedHostMetadata.DriverName, h.Name, "")
-	if err != nil {
-		return &Host{}, false, err
-	}
-
 	for h.ConfigVersion = migratedHostMetadata.ConfigVersion; h.ConfigVersion <= version.ConfigVersion; h.ConfigVersion++ {
 		switch h.ConfigVersion {
 		case 0:
-			hostV0 := &HostV0{
-				Driver: driver,
-			}
+			hostV0 := &HostV0{}
 			if err := json.Unmarshal(data, &hostV0); err != nil {
 				return &Host{}, migrationPerformed, fmt.Errorf("Error unmarshalling host config version 0: %s", err)
 			}
@@ -58,9 +46,10 @@ func MigrateHost(h *Host, data []byte) (*Host, bool, error) {
 		}
 	}
 
-	h.Driver = driver
-	if err := json.Unmarshal(data, &h); err != nil {
-		return &Host{}, migrationPerformed, fmt.Errorf("Error unmarshalling most recent host version: %s", err)
+	h.Driver = &none.Driver{} // dummy value to allow demarshaling
+
+	if err := json.Unmarshal(data, h); err != nil {
+		return nil, migrationPerformed, fmt.Errorf("Error unmarshalling most recent host version: %s", err)
 	}
 
 	return h, migrationPerformed, nil

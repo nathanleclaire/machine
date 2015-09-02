@@ -3,9 +3,9 @@ package google
 import (
 	"fmt"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 )
@@ -32,60 +32,60 @@ func init() {
 
 // RegisterCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			Name:   "google-zone",
 			Usage:  "GCE Zone",
 			Value:  "us-central1-a",
 			EnvVar: "GOOGLE_ZONE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-machine-type",
 			Usage:  "GCE Machine Type",
 			Value:  "f1-micro",
 			EnvVar: "GOOGLE_MACHINE_TYPE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-username",
 			Usage:  "GCE User Name",
 			Value:  "docker-user",
 			EnvVar: "GOOGLE_USERNAME",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-project",
 			Usage:  "GCE Project",
 			EnvVar: "GOOGLE_PROJECT",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-auth-token",
 			Usage:  "GCE oAuth token",
 			EnvVar: "GOOGLE_AUTH_TOKEN",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-scopes",
 			Usage:  "GCE Scopes (comma-separated if multiple scopes)",
 			Value:  "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write",
 			EnvVar: "GOOGLE_SCOPES",
 		},
-		cli.IntFlag{
+		{
 			Name:   "google-disk-size",
 			Usage:  "GCE Instance Disk Size (in GB)",
 			Value:  10,
 			EnvVar: "GOOGLE_DISK_SIZE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-disk-type",
 			Usage:  "GCE Instance Disk type",
 			Value:  "pd-standard",
 			EnvVar: "GOOGLE_DISK_TYPE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-address",
 			Usage:  "GCE Instance External IP",
 			EnvVar: "GOOGLE_ADDRESS",
 		},
-		cli.BoolFlag{
+		{
 			Name:   "google-preemptible",
 			Usage:  "GCE Instance Preemptibility",
 			EnvVar: "GOOGLE_PREEMPTIBLE",

@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/machine/libmachine/auth"
 	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/drivers/rpc"
 	"github.com/docker/machine/libmachine/engine"
 	"github.com/docker/machine/libmachine/host"
 	"github.com/docker/machine/libmachine/log"
@@ -29,6 +30,21 @@ func (s Filestore) getMachinesDir() string {
 }
 
 func (s Filestore) Save(host *host.Host) error {
+	// TODO: Does this belong here?
+	if rpcClientDriver, ok := host.Driver.(*rpcdriver.RpcClientDriver); ok {
+		data, err := rpcClientDriver.GetConfigRaw()
+		if err != nil {
+			return fmt.Errorf("Error getting raw config for driver: %s", err)
+		}
+		host.RawDriver = data
+	} else {
+		data, err := json.Marshal(host.Driver)
+		if err != nil {
+			return fmt.Errorf("Error marshalling driver to raw format: %s", err)
+		}
+		host.RawDriver = data
+	}
+
 	data, err := json.Marshal(host)
 	if err != nil {
 		return err
@@ -47,18 +63,7 @@ func (s Filestore) Save(host *host.Host) error {
 	return nil
 }
 
-func (s Filestore) Remove(name string, force bool) error {
-	h, err := s.Load(name)
-	if err != nil {
-		return err
-	}
-
-	if err := h.Driver.Remove(); err != nil {
-		if !force {
-			return err
-		}
-	}
-
+func (s Filestore) Remove(name string) error {
 	hostPath := filepath.Join(s.getMachinesDir(), name)
 	return os.RemoveAll(hostPath)
 }

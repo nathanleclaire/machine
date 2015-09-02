@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/state"
 )
@@ -31,24 +31,24 @@ func init() {
 
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			Name:  "generic-ip-address",
 			Usage: "IP Address of machine",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "generic-ssh-user",
 			Usage: "SSH user",
 			Value: "root",
 		},
-		cli.StringFlag{
+		{
 			Name:  "generic-ssh-key",
 			Usage: "SSH private key path",
 			Value: filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa"),
 		},
-		cli.IntFlag{
+		{
 			Name:  "generic-ssh-port",
 			Usage: "SSH port",
 			Value: 22,
