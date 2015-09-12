@@ -42,6 +42,12 @@ type Driver struct {
 	client           Client
 }
 
+const (
+	defaultSSHUser       = "root"
+	defaultSSHPort       = 22
+	defaultActiveTimeout = 200
+)
+
 func init() {
 	drivers.Register("openstack", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -157,17 +163,17 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "openstack-ssh-user",
 			Usage: "OpenStack SSH user",
-			Value: "root",
+			Value: defaultSSHUser,
 		},
 		cli.IntFlag{
 			Name:  "openstack-ssh-port",
 			Usage: "OpenStack SSH port",
-			Value: 22,
+			Value: defaultSSHPort,
 		},
 		cli.IntFlag{
 			Name:  "openstack-active-timeout",
 			Usage: "OpenStack active timeout",
-			Value: 200,
+			Value: defaultActiveTimeout,
 		},
 	}
 }
@@ -178,8 +184,11 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 
 func NewDerivedDriver(hostName, artifactPath string) (*Driver, error) {
 	return &Driver{
-		client: &GenericClient{},
+		client:        &GenericClient{},
+		ActiveTimeout: defaultActiveTimeout,
 		BaseDriver: &drivers.BaseDriver{
+			SSHUser:      defaultSSHUser,
+			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},

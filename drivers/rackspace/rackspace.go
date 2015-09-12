@@ -16,6 +16,14 @@ type Driver struct {
 	APIKey string
 }
 
+const (
+	defaultEndpointType  = "publicURL"
+	defaultFlavorId      = "general1-1"
+	defaultSSHUser       = "root"
+	defaultSSHPort       = 22
+	defaultDockerInstall = "true"
+)
+
 func init() {
 	drivers.Register("rackspace", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -48,7 +56,7 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "OS_ENDPOINT_TYPE",
 			Name:   "rackspace-endpoint-type",
 			Usage:  "Rackspace endpoint type (adminURL, internalURL or the default publicURL)",
-			Value:  "publicURL",
+			Value:  defaultEndpointType,
 		},
 		cli.StringFlag{
 			Name:  "rackspace-image-id",
@@ -57,23 +65,23 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "rackspace-flavor-id",
 			Usage:  "Rackspace flavor ID. Default: General Purpose 1GB",
-			Value:  "general1-1",
+			Value:  defaultFlavorId,
 			EnvVar: "OS_FLAVOR_ID",
 		},
 		cli.StringFlag{
 			Name:  "rackspace-ssh-user",
 			Usage: "SSH user for the newly booted machine. Set to root by default",
-			Value: "root",
+			Value: defaultSSHUser,
 		},
 		cli.IntFlag{
 			Name:  "rackspace-ssh-port",
 			Usage: "SSH port for the newly booted machine. Set to 22 by default",
-			Value: 22,
+			Value: defaultSSHPort,
 		},
 		cli.StringFlag{
 			Name:  "rackspace-docker-install",
 			Usage: "Set if docker have to be installed on the machine",
-			Value: "true",
+			Value: defaultDockerInstall,
 		},
 	}
 }
@@ -89,7 +97,9 @@ func NewDriver(machineName, artifactPath string) (drivers.Driver, error) {
 		return nil, err
 	}
 
-	return &Driver{Driver: inner}, nil
+	return &Driver{
+		Driver: inner,
+	}, nil
 }
 
 // DriverName is the user-visible name of this driver.

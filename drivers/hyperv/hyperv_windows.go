@@ -22,15 +22,31 @@ type Driver struct {
 	boot2DockerLoc string
 	vSwitch        string
 	diskImage      string
-	diskSize       int
-	memSize        int
+	DiskSize       int
+	MemSize        int
 }
+
+const (
+	defaultDiskSize = 20000
+	defaultMemory   = 1024
+)
 
 func init() {
 	drivers.Register("hyper-v", &drivers.RegisteredDriver{
 		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
+}
+
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	return &Driver{
+		DiskSize: defaultDiskSize,
+		MemSize:  defaultMemory,
+		BaseDriver: &drivers.BaseDriver{
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}, nil
 }
 
 // GetCreateFlags registers the flags this driver adds to
@@ -52,12 +68,12 @@ func GetCreateFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  "hyper-v-disk-size",
 			Usage: "Hyper-V disk size for host in MB.",
-			Value: 20000,
+			Value: defaultDiskSize,
 		},
 		cli.IntFlag{
 			Name:  "hyper-v-memory",
 			Usage: "Hyper-V memory size for host in MB.",
-			Value: 1024,
+			Value: defaultMemory,
 		},
 	}
 }
@@ -66,19 +82,14 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.boot2DockerURL = flags.String("hyper-v-boot2docker-url")
 	d.boot2DockerLoc = flags.String("hyper-v-boot2docker-location")
 	d.vSwitch = flags.String("hyper-v-virtual-switch")
-	d.diskSize = flags.Int("hyper-v-disk-size")
-	d.memSize = flags.Int("hyper-v-memory")
+	d.DiskSize = flags.Int("hyper-v-disk-size")
+	d.MemSize = flags.Int("hyper-v-memory")
 	d.SwarmMaster = flags.Bool("swarm-master")
 	d.SwarmHost = flags.String("swarm-host")
 	d.SwarmDiscovery = flags.String("swarm-discovery")
 	d.SSHUser = "docker"
 	d.SSHPort = 22
 	return nil
-}
-
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	return &Driver{BaseDriver: inner}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -174,7 +185,7 @@ func (d *Driver) Create() error {
 		"New-VM",
 		"-Name", d.MachineName,
 		"-Path", fmt.Sprintf("'%s'", d.LocalArtifactPath(".")),
-		"-MemoryStartupBytes", fmt.Sprintf("%dMB", d.memSize)}
+		"-MemoryStartupBytes", fmt.Sprintf("%dMB", d.MemSize)}
 	_, err = execute(command)
 	if err != nil {
 		return err
@@ -409,7 +420,7 @@ func (d *Driver) generateDiskImage() error {
 	command = []string{
 		"Resize-VHD",
 		"-Path", fmt.Sprintf("'%s'", d.diskImage),
-		"-SizeBytes", fmt.Sprintf("%dMB", d.diskSize)}
+		"-SizeBytes", fmt.Sprintf("%dMB", d.DiskSize)}
 	_, err = execute(command)
 	if err != nil {
 		return err

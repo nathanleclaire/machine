@@ -18,14 +18,6 @@ type ScpFakeDriver struct {
 
 type ScpFakeStore struct{}
 
-func (d ScpFakeDriver) AuthorizePort(ports []*drivers.Port) error {
-	return nil
-}
-
-func (d ScpFakeDriver) DeauthorizePort(ports []*drivers.Port) error {
-	return nil
-}
-
 func (d ScpFakeDriver) DriverName() string {
 	return "fake"
 }

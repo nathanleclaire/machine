@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnutils"
@@ -49,9 +48,16 @@ type Driver struct {
 	ConfigDriveURL string
 }
 
+const (
+	defaultSSHUser  = B2DUser
+	defaultSSHPass  = B2DPass
+	defaultDiskSize = 20000
+	defaultCpus     = 1
+	defaultMemory   = 1024
+)
+
 func init() {
 	drivers.Register("vmwarefusion", &drivers.RegisteredDriver{
-		New:            NewDriver,
 		GetCreateFlags: GetCreateFlags,
 	})
 }
@@ -74,38 +80,47 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "FUSION_CPU_COUNT",
 			Name:   "vmwarefusion-cpu-count",
 			Usage:  "number of CPUs for the machine (-1 to use the number of CPUs available)",
-			Value:  1,
+			Value:  defaultCpus,
 		},
 		cli.IntFlag{
 			EnvVar: "FUSION_MEMORY_SIZE",
 			Name:   "vmwarefusion-memory-size",
 			Usage:  "Fusion size of memory for host VM (in MB)",
-			Value:  1024,
+			Value:  defaultMemory,
 		},
 		cli.IntFlag{
 			EnvVar: "FUSION_DISK_SIZE",
 			Name:   "vmwarefusion-disk-size",
 			Usage:  "Fusion size of disk for host VM (in MB)",
-			Value:  20000,
+			Value:  defaultDiskSize,
 		},
 		cli.StringFlag{
 			EnvVar: "FUSION_SSH_USER",
 			Name:   "vmwarefusion-ssh-user",
 			Usage:  "SSH user",
-			Value:  B2DUser,
+			Value:  defaultSSHUser,
 		},
 		cli.StringFlag{
 			EnvVar: "FUSION_SSH_PASSWORD",
 			Name:   "vmwarefusion-ssh-password",
 			Usage:  "SSH password",
-			Value:  B2DPass,
+			Value:  defaultSSHPass,
 		},
 	}
 }
 
-func NewDriver(machineName string, storePath string, caCert string, privateKey string) (drivers.Driver, error) {
-	inner := drivers.NewBaseDriver(machineName, storePath, caCert, privateKey)
-	return &Driver{BaseDriver: inner}, nil
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+	return &Driver{
+		CPUS:        defaultCpus,
+		Memory:      defaultMemory,
+		DiskSize:    defaultDiskSize,
+		SSHPassword: defaultSSHPass,
+		BaseDriver: &drivers.BaseDriver{
+			SSHUser:      defaultSSHUser,
+			MachineName:  hostName,
+			ArtifactPath: artifactPath,
+		},
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -130,7 +145,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.DiskSize = flags.Int("vmwarefusion-disk-size")
 	d.Boot2DockerURL = flags.String("vmwarefusion-boot2docker-url")
 	d.ConfigDriveURL = flags.String("vmwarefusion-configdrive-url")
-	d.ISO = d.ResolveStorePath(isoFilename)
+	d.ISO = d.LocalArtifactPath(isoFilename)
 	d.SwarmMaster = flags.Bool("swarm-master")
 	d.SwarmHost = flags.String("swarm-host")
 	d.SwarmDiscovery = flags.String("swarm-discovery")
@@ -199,7 +214,7 @@ func (d *Driver) Create() error {
 	// download cloud-init config drive
 	if d.ConfigDriveURL != "" {
 		log.Infof("Downloading %s from %s", isoConfigDrive, d.ConfigDriveURL)
-		if err := b2dutils.DownloadISO(d.ResolveStorePath("."), isoConfigDrive, d.ConfigDriveURL); err != nil {
+		if err := b2dutils.DownloadISO(d.LocalArtifactPath("."), isoConfigDrive, d.ConfigDriveURL); err != nil {
 			return err
 		}
 	}

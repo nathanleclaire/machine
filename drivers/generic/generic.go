@@ -20,7 +20,13 @@ type Driver struct {
 }
 
 const (
+	defaultSSHUser = "root"
+	defaultSSHPort = 22
 	defaultTimeout = 1 * time.Second
+)
+
+var (
+	defaultSSHKey = filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa")
 )
 
 func init() {
@@ -36,29 +42,31 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "generic-ip-address",
 			Usage: "IP Address of machine",
-			Value: "",
 		},
 		cli.StringFlag{
 			Name:  "generic-ssh-user",
 			Usage: "SSH user",
-			Value: "root",
+			Value: defaultSSHUser,
 		},
 		cli.StringFlag{
 			Name:  "generic-ssh-key",
 			Usage: "SSH private key path",
-			Value: filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa"),
+			Value: defaultSSHKey,
 		},
 		cli.IntFlag{
 			Name:  "generic-ssh-port",
 			Usage: "SSH port",
-			Value: 22,
+			Value: defaultSSHPort,
 		},
 	}
 }
 
 func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
+		SSHKey: defaultSSHKey,
 		BaseDriver: &drivers.BaseDriver{
+			SSHUser:      defaultSSHUser,
+			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},

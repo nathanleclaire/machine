@@ -31,6 +31,13 @@ type Driver struct {
 	Id               string
 }
 
+const (
+	defaultInstanceProfile  = "small"
+	defaultDiskSize         = 50
+	defaultImage            = "ubuntu-14.04"
+	defaultAvailabilityZone = "ch-gva-2"
+)
+
 func init() {
 	drivers.Register("exoscale", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -59,19 +66,19 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			EnvVar: "EXOSCALE_INSTANCE_PROFILE",
 			Name:   "exoscale-instance-profile",
-			Value:  "small",
+			Value:  defaultInstanceProfile,
 			Usage:  "exoscale instance profile (small, medium, large, ...)",
 		},
 		cli.IntFlag{
 			EnvVar: "EXOSCALE_DISK_SIZE",
 			Name:   "exoscale-disk-size",
-			Value:  50,
+			Value:  defaultDiskSize,
 			Usage:  "exoscale disk size (10, 50, 100, 200, 400)",
 		},
 		cli.StringFlag{
 			EnvVar: "EXSOCALE_IMAGE",
 			Name:   "exoscale-image",
-			Value:  "ubuntu-14.04",
+			Value:  defaultImage,
 			Usage:  "exoscale image template",
 		},
 		cli.StringSliceFlag{
@@ -83,7 +90,7 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			EnvVar: "EXOSCALE_AVAILABILITY_ZONE",
 			Name:   "exoscale-availability-zone",
-			Value:  "ch-gva-2",
+			Value:  defaultAvailabilityZone,
 			Usage:  "exoscale availibility zone",
 		},
 	}
@@ -91,6 +98,10 @@ func GetCreateFlags() []cli.Flag {
 
 func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
+		InstanceProfile:  defaultInstanceProfile,
+		DiskSize:         defaultDiskSize,
+		Image:            defaultImage,
+		AvailabilityZone: defaultAvailabilityZone,
 		BaseDriver: &drivers.BaseDriver{
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,

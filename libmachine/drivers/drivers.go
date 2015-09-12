@@ -10,23 +10,12 @@ import (
 	"github.com/docker/machine/libmachine/state"
 )
 
-type Port struct {
-	Protocol string
-	Port     int
-}
-
 // Driver defines how a host is created and controlled. Different types of
 // driver represent different ways hosts can be created (e.g. different
 // hypervisors, different cloud providers)
 type Driver interface {
-	// AuthorizePort authorizes a port for machine access
-	AuthorizePort(ports []*Port) error
-
 	// Create a host using the driver's config
 	Create() error
-
-	// DeauthorizePort removes a port for machine access
-	DeauthorizePort(ports []*Port) error
 
 	// DriverName returns the name of the driver as it is registered
 	DriverName() string

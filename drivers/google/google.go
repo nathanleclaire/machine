@@ -30,6 +30,15 @@ func init() {
 	})
 }
 
+const (
+	defaultZone        = "us-central1-a"
+	defaultMachineType = "f1-micro"
+	defaultUsername    = "docker-user"
+	defaultScopes      = "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write"
+	defaultDiskSize    = 10
+	defaultDiskType    = "pd-standard"
+)
+
 // RegisterCreateFlags registers the flags this driver adds to
 // "docker hosts create"
 func GetCreateFlags() []cli.Flag {
@@ -37,19 +46,19 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "google-zone",
 			Usage:  "GCE Zone",
-			Value:  "us-central1-a",
+			Value:  defaultZone,
 			EnvVar: "GOOGLE_ZONE",
 		},
 		cli.StringFlag{
 			Name:   "google-machine-type",
 			Usage:  "GCE Machine Type",
-			Value:  "f1-micro",
+			Value:  defaultMachineType,
 			EnvVar: "GOOGLE_MACHINE_TYPE",
 		},
 		cli.StringFlag{
 			Name:   "google-username",
 			Usage:  "GCE User Name",
-			Value:  "docker-user",
+			Value:  defaultUsername,
 			EnvVar: "GOOGLE_USERNAME",
 		},
 		cli.StringFlag{
@@ -65,19 +74,19 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:   "google-scopes",
 			Usage:  "GCE Scopes (comma-separated if multiple scopes)",
-			Value:  "https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write",
+			Value:  defaultScopes,
 			EnvVar: "GOOGLE_SCOPES",
 		},
 		cli.IntFlag{
 			Name:   "google-disk-size",
 			Usage:  "GCE Instance Disk Size (in GB)",
-			Value:  10,
+			Value:  defaultDiskSize,
 			EnvVar: "GOOGLE_DISK_SIZE",
 		},
 		cli.StringFlag{
 			Name:   "google-disk-type",
 			Usage:  "GCE Instance Disk type",
-			Value:  "pd-standard",
+			Value:  defaultDiskType,
 			EnvVar: "GOOGLE_DISK_TYPE",
 		},
 		cli.StringFlag{
@@ -96,7 +105,13 @@ func GetCreateFlags() []cli.Flag {
 // NewDriver creates a Driver with the specified storePath.
 func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
+		DiskSize:    defaultDiskSize,
+		Zone:        defaultZone,
+		MachineType: defaultMachineType,
+		Scopes:      defaultScopes,
+		DiskType:    defaultDiskType,
 		BaseDriver: &drivers.BaseDriver{
+			SSHUser:      defaultUsername,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},

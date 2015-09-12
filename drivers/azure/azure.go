@@ -31,6 +31,15 @@ type Driver struct {
 	DockerSwarmMasterPort   int
 }
 
+const (
+	defaultDockerPort      = 2376
+	defaultSwarmMasterPort = 3376
+	defaultLocation        = "West US"
+	defaultSize            = "Small"
+	defaultSSHPort         = 22
+	defaultSSHUsername     = "ubuntu"
+)
+
 func init() {
 	drivers.Register("azure", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -44,12 +53,12 @@ func GetCreateFlags() []cli.Flag {
 		cli.IntFlag{
 			Name:  "azure-docker-port",
 			Usage: "Azure Docker port",
-			Value: 2376,
+			Value: defaultDockerPort,
 		},
 		cli.IntFlag{
 			Name:  "azure-docker-swarm-master-port",
 			Usage: "Azure Docker Swarm master port",
-			Value: 3376,
+			Value: defaultSwarmMasterPort,
 		},
 		cli.StringFlag{
 			EnvVar: "AZURE_IMAGE",
@@ -60,7 +69,7 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "AZURE_LOCATION",
 			Name:   "azure-location",
 			Usage:  "Azure location",
-			Value:  "West US",
+			Value:  defaultLocation,
 		},
 		cli.StringFlag{
 			Name:  "azure-password",
@@ -75,12 +84,12 @@ func GetCreateFlags() []cli.Flag {
 			EnvVar: "AZURE_SIZE",
 			Name:   "azure-size",
 			Usage:  "Azure size",
-			Value:  "Small",
+			Value:  defaultSize,
 		},
 		cli.IntFlag{
 			Name:  "azure-ssh-port",
 			Usage: "Azure SSH port",
-			Value: 22,
+			Value: defaultSSHPort,
 		},
 
 		cli.StringFlag{
@@ -96,14 +105,20 @@ func GetCreateFlags() []cli.Flag {
 		cli.StringFlag{
 			Name:  "azure-username",
 			Usage: "Azure username",
-			Value: "ubuntu",
+			Value: defaultSSHUsername,
 		},
 	}
 }
 
 func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	d := &Driver{
+		DockerPort:            defaultDockerPort,
+		DockerSwarmMasterPort: defaultSwarmMasterPort,
+		Location:              defaultLocation,
+		Size:                  defaultSize,
 		BaseDriver: &drivers.BaseDriver{
+			SSHPort:      defaultSSHPort,
+			SSHUser:      defaultSSHUsername,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
