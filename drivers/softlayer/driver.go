@@ -57,7 +57,7 @@ func init() {
 	})
 }
 
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	return &Driver{
 		Client: &Client{
 			Endpoint: ApiEndpoint,
@@ -76,7 +76,7 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}, nil
+	}
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

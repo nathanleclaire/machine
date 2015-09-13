@@ -178,11 +178,11 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	return NewDerivedDriver(hostName, artifactPath)
 }
 
-func NewDerivedDriver(hostName, artifactPath string) (*Driver, error) {
+func NewDerivedDriver(hostName, artifactPath string) *Driver {
 	return &Driver{
 		client:        &GenericClient{},
 		ActiveTimeout: defaultActiveTimeout,
@@ -192,7 +192,7 @@ func NewDerivedDriver(hostName, artifactPath string) (*Driver, error) {
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}, nil
+	}
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

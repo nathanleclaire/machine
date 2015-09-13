@@ -103,7 +103,7 @@ func GetCreateFlags() []cli.Flag {
 }
 
 // NewDriver creates a Driver with the specified storePath.
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	return &Driver{
 		DiskSize:    defaultDiskSize,
 		Zone:        defaultZone,
@@ -115,7 +115,7 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}, nil
+	}
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

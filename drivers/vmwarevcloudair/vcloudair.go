@@ -138,7 +138,7 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	return &Driver{
 		Catalog:     defaultCatalog,
 		CatalogItem: defaultCatalogItem,
@@ -150,7 +150,7 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}, nil
+	}
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

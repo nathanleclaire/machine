@@ -173,7 +173,7 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	id := generateId()
 	return &Driver{
 		Id:                id,
@@ -189,7 +189,7 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}, nil
+	}
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {

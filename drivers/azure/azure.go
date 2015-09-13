@@ -110,7 +110,7 @@ func GetCreateFlags() []cli.Flag {
 	}
 }
 
-func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
+func NewDriver(hostName, artifactPath string) drivers.Driver {
 	d := &Driver{
 		DockerPort:            defaultDockerPort,
 		DockerSwarmMasterPort: defaultSwarmMasterPort,
@@ -123,7 +123,7 @@ func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 			ArtifactPath: artifactPath,
 		},
 	}
-	return d, nil
+	return d
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
