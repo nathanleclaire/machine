@@ -187,7 +187,7 @@ func ConfigureAuth(p Provisioner) error {
 }
 
 func waitForDocker(p Provisioner, dockerPort int) {
-	utils.WaitForSpecific(func() bool {
+	mcnutils.WaitForSpecific(func() bool {
 		// HACK: Check netstat's output to see if anyone's listening on the Docker API port.
 		if _, err := p.SSHCommand(fmt.Sprintf("netstat -a | grep %d", dockerPort)); err != nil {
 			return false
