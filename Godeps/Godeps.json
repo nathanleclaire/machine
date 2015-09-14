@@ -18,8 +18,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-64-ge1712f3",
-			"Rev": "e1712f381785e32046927f64a7c86fe569203196"
+			"Comment": "1.2.0-143-ga65b733",
+			"Rev": "a65b733b303f0055f8d324d805f393cd3e7a7904"
 		},
 		{
 			"ImportPath": "github.com/digitalocean/godo",
