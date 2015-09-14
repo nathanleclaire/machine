@@ -45,6 +45,10 @@ var (
 	ErrUnknownShell       = errors.New("Error: Unknown shell")
 	ErrNoMachineSpecified = errors.New("Error: Expected to get one or more machine names as arguments.")
 	ErrExpectedOneMachine = errors.New("Error: Expected one machine name as an argument.")
+
+	// TODO: Should this state be tracked at the module level?  Is there a more elegant solution?
+	pluginServers    = []*plugin.LocalBinaryPlugin{}
+	rpcClientDrivers = []*rpcdriver.RpcClientDriver{}
 )
 
 type HostListItem struct {
@@ -118,7 +122,25 @@ func newPluginDriver(driverName string, rawContent []byte) (*rpcdriver.RpcClient
 		return nil, fmt.Errorf("Error attempting to get client driver for RPC: %s", err)
 	}
 
+	pluginServers = append(pluginServers, p)
+	rpcClientDrivers = append(rpcClientDrivers, d)
+
 	return d, nil
+}
+
+func ClosePluginServers() {
+	// TODO: This implementation just seems kinda bad.  At least we could
+	// pass the plugin to the RPC client driver and handle all the relevant
+	// bits within that object.
+	for _, p := range pluginServers {
+		p.Close()
+	}
+
+	for _, d := range rpcClientDrivers {
+		if err := d.Close(); err != nil {
+			log.Warnf("Error closing plugin server from client driver: %s", err)
+		}
+	}
 }
 
 func listHosts(store persist.Store) ([]*host.Host, error) {

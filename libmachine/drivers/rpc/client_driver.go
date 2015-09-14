@@ -38,6 +38,10 @@ func (c *RpcClientDriver) UnmarshalJSON(data []byte) error {
 	return c.SetConfigRaw(data)
 }
 
+func (c *RpcClientDriver) Close() error {
+	return c.Client.Call("RpcServerDriver.Close", struct{}{}, nil)
+}
+
 // Helper method to make requests which take no arguments and return simply a
 // string, e.g. "GetIP".
 func (c *RpcClientDriver) rpcStringCall(method string) (string, error) {

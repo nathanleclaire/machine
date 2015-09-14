@@ -28,6 +28,7 @@ func RegisterDriver(d drivers.Driver) {
 
 	rpcd := new(rpcdriver.RpcServerDriver)
 	rpcd.ActualDriver = d
+	rpcd.CloseCh = make(chan bool)
 	rpc.Register(rpcd)
 
 	rpc.HandleHTTP()
@@ -40,5 +41,7 @@ func RegisterDriver(d drivers.Driver) {
 
 	fmt.Println(listener.Addr())
 
-	http.Serve(listener, nil)
+	go http.Serve(listener, nil)
+
+	<-rpcd.CloseCh
 }

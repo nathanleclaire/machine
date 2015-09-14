@@ -80,6 +80,10 @@ func main() {
 		}
 		return nil
 	}
+	app.After = func(c *cli.Context) error {
+		commands.ClosePluginServers()
+		return nil
+	}
 	app.Commands = commands.Commands
 	app.CommandNotFound = cmdNotFound
 	app.Usage = "Create and manage machines running Docker."

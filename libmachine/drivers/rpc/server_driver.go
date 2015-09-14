@@ -48,6 +48,12 @@ func (r RpcFlags) Bool(key string) bool {
 
 type RpcServerDriver struct {
 	ActualDriver drivers.Driver
+	CloseCh      chan bool
+}
+
+func (r *RpcServerDriver) Close(_, _ *struct{}) error {
+	r.CloseCh <- true
+	return nil
 }
 
 func (r *RpcServerDriver) GetVersion(_ *struct{}, reply *int) error {
