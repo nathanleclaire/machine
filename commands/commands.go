@@ -132,14 +132,14 @@ func ClosePluginServers() {
 	// TODO: This implementation just seems kinda bad.  At least we could
 	// pass the plugin to the RPC client driver and handle all the relevant
 	// bits within that object.
-	for _, p := range pluginServers {
-		p.Close()
-	}
-
 	for _, d := range rpcClientDrivers {
 		if err := d.Close(); err != nil {
 			log.Warnf("Error closing plugin server from client driver: %s", err)
 		}
+	}
+
+	for _, p := range pluginServers {
+		p.Close()
 	}
 }
 
@@ -211,6 +211,21 @@ func getFirstArgHost(c *cli.Context) *host.Host {
 		log.Fatalf("Error trying to get host %q: %s", hostName, err)
 	}
 	return h
+}
+
+func getHostsFromContext(c *cli.Context) ([]*host.Host, error) {
+	store := getStore(c)
+	hosts := []*host.Host{}
+
+	for _, hostName := range c.Args() {
+		h, err := loadHost(store, hostName)
+		if err != nil {
+			return nil, fmt.Errorf("Could not load host %q: %s", hostName, err)
+		}
+		hosts = append(hosts, h)
+	}
+
+	return hosts, nil
 }
 
 var sharedCreateFlags = []cli.Flag{
@@ -540,7 +555,7 @@ func runActionForeachMachine(actionName string, machines []*host.Host) {
 func runActionWithContext(actionName string, c *cli.Context) error {
 	store := getStore(c)
 
-	hosts, err := listHosts(store)
+	hosts, err := getHostsFromContext(c)
 	if err != nil {
 		return err
 	}

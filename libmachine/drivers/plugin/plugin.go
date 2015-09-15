@@ -3,7 +3,6 @@ package plugin
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -33,14 +32,10 @@ var (
 
 func attachStream(scanner *bufio.Scanner, streamOutCh chan<- string) {
 	for scanner.Scan() {
-		streamOutCh <- strings.TrimSpace(scanner.Text())
+		streamOutCh <- strings.Trim(scanner.Text(), "\n")
 	}
 	if err := scanner.Err(); err != nil {
-		if err != io.EOF {
-			log.Warnf("Unexpected error scanning stream: %s", err)
-		} else {
-			return
-		}
+		log.Warnf("Unexpected error scanning stream: %s", err)
 	}
 }
 
