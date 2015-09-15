@@ -40,10 +40,15 @@ import (
 	"github.com/docker/machine/libmachine/persist"
 )
 
+const (
+	defaultHostName = "default"
+)
+
 var (
-	stateTimeoutDuration  = time.Second * 3
+	stateTimeoutDuration = time.Second * 3
+
 	ErrUnknownShell       = errors.New("Error: Unknown shell")
-	ErrNoMachineSpecified = errors.New("Error: Expected to get one or more machine names as arguments.")
+	ErrNoMachineSpecified = fmt.Errorf("Error: Expected to get one or more machine names as arguments and/or loading machine %q failed.", defaultHostName)
 	ErrExpectedOneMachine = errors.New("Error: Expected one machine name as an argument.")
 
 	// TODO: Should this state be tracked at the module level?  Is there a more elegant solution?
@@ -192,6 +197,12 @@ func saveHost(store persist.Store, h *host.Host) error {
 func getFirstArgHost(c *cli.Context) *host.Host {
 	store := getStore(c)
 	hostName := c.Args().First()
+
+	if hostName == "" {
+		// This is kind of like the old "boot2docker-cli" style flow.
+		log.Debugf("No hostname specified explicitly, using %q...", defaultHostName)
+		hostName = defaultHostName
+	}
 
 	exists, err := store.Exists(hostName)
 	if err != nil {
@@ -561,7 +572,13 @@ func runActionWithContext(actionName string, c *cli.Context) error {
 	}
 
 	if len(hosts) == 0 {
-		log.Fatal(ErrNoMachineSpecified)
+		h, err := loadHost(store, defaultHostName)
+		if err != nil {
+			log.Error(err)
+			log.Fatal(ErrNoMachineSpecified)
+		}
+
+		hosts = []*host.Host{h}
 	}
 
 	runActionForeachMachine(actionName, hosts)

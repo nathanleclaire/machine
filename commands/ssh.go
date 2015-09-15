@@ -12,26 +12,16 @@ import (
 
 func cmdSsh(c *cli.Context) {
 	args := c.Args()
-	name := args.First()
+	h := getFirstArgHost(c)
 	cmd := ""
 
-	if name == "" {
-		log.Fatal("Error: Please specify a machine name.")
-	}
-
-	store := getStore(c)
-	host, err := loadHost(store, name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	currentState, err := host.Driver.GetState()
+	currentState, err := h.Driver.GetState()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if currentState != state.Running {
-		log.Fatalf("Error: Cannot run SSH command: Host %q is not running", host.Name)
+		log.Fatalf("Error: Cannot run SSH command: Host %q is not running", h.Name)
 	}
 
 	// Loop through the arguments and parse out a command which relies on
@@ -50,20 +40,14 @@ func cmdSsh(c *cli.Context) {
 		}
 	}
 
-	// It is possible that the user has specified an appended command which
-	// does not rely on the flag parsing terminator, such as
-	// `docker-machine ssh dev ls`, so this block accounts for that case.
-	if len(cmd) == 0 {
-		cmd = strings.Join(args[1:], " ")
-	}
-
-	if len(c.Args()) == 1 {
-		err := host.CreateSSHShell()
+	if len(c.Args()) <= 1 {
+		err := h.CreateSSHShell()
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		output, err := host.RunSSHCommand(cmd)
+		cmd = strings.Join(args[1:], " ")
+		output, err := h.RunSSHCommand(cmd)
 		if err != nil {
 			log.Fatal(err)
 		}
