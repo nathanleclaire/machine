@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 )
@@ -41,134 +41,117 @@ type deviceConfig struct {
 	PrivateVLAN   int
 }
 
-const (
-	defaultMemory        = 1024
-	defaultDiskSize      = 0
-	defaultRegion        = "dal01"
-	defaultCpus          = 1
-	defaultImage         = "UBUNTU_LATEST"
-	defaultPublicVLANIP  = 0
-	defaultPrivateVLANIP = 0
-)
-
 func init() {
 	drivers.Register("softlayer", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
 	})
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
-		Client: &Client{
-			Endpoint: ApiEndpoint,
-		},
-		deviceConfig: &deviceConfig{
-			HourlyBilling: true,
-			DiskSize:      defaultDiskSize,
-			Image:         defaultImage,
-			Memory:        defaultMemory,
-			Cpu:           defaultCpus,
-			Region:        defaultRegion,
-			PrivateVLAN:   defaultPrivateVLANIP,
-			PublicVLAN:    defaultPublicVLANIP,
-		},
 		BaseDriver: &drivers.BaseDriver{
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
 	return d.GetIP()
 }
 
-func GetCreateFlags() []cli.Flag {
+func GetCreateFlags() []mcnflag.Flag {
 	// Set hourly billing to true by default since codegangsta cli doesn't take default bool values
 	if os.Getenv("SOFTLAYER_HOURLY_BILLING") == "" {
 		os.Setenv("SOFTLAYER_HOURLY_BILLING", "true")
 	}
-	return []cli.Flag{
-		cli.IntFlag{
+	return []mcnflag.Flag{
+		{
 			EnvVar: "SOFTLAYER_MEMORY",
 			Name:   "softlayer-memory",
 			Usage:  "Memory in MB for machine",
-			Value:  defaultMemory,
+			Value:  1024,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "SOFTLAYER_DISK_SIZE",
 			Name:   "softlayer-disk-size",
 			Usage:  "Disk size for machine, a value of 0 uses the default size on softlayer",
-			Value:  defaultDiskSize,
+			Value:  0,
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_USER",
 			Name:   "softlayer-user",
 			Usage:  "softlayer user account name",
+			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_API_KEY",
 			Name:   "softlayer-api-key",
 			Usage:  "softlayer user API key",
+			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_REGION",
 			Name:   "softlayer-region",
 			Usage:  "softlayer region for machine",
-			Value:  defaultRegion,
+			Value:  "dal01",
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "SOFTLAYER_CPU",
 			Name:   "softlayer-cpu",
 			Usage:  "number of CPU's for the machine",
-			Value:  defaultCpus,
+			Value:  1,
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_HOSTNAME",
 			Name:   "softlayer-hostname",
 			Usage:  "hostname for the machine - defaults to machine name",
+			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_DOMAIN",
 			Name:   "softlayer-domain",
 			Usage:  "domain name for machine",
+			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_API_ENDPOINT",
 			Name:   "softlayer-api-endpoint",
 			Usage:  "softlayer api endpoint to use",
 			Value:  ApiEndpoint,
 		},
-		cli.BoolFlag{
+		{
 			EnvVar: "SOFTLAYER_HOURLY_BILLING",
 			Name:   "softlayer-hourly-billing",
 			Usage:  "set hourly billing for machine - on by default",
 		},
-		cli.BoolFlag{
+		{
 			EnvVar: "SOFTLAYER_LOCAL_DISK",
 			Name:   "softlayer-local-disk",
 			Usage:  "use machine local disk instead of softlayer SAN",
 		},
-		cli.BoolFlag{
+		{
 			EnvVar: "SOFTLAYER_PRIVATE_NET",
 			Name:   "softlayer-private-net-only",
 			Usage:  "Use only private networking",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "SOFTLAYER_IMAGE",
 			Name:   "softlayer-image",
 			Usage:  "OS image for machine",
-			Value:  defaultImage,
+			Value:  "UBUNTU_LATEST",
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "SOFTLAYER_PUBLIC_VLAN_ID",
 			Name:   "softlayer-public-vlan-id",
 			Usage:  "",
+			Value:  0,
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "SOFTLAYER_PRIVATE_VLAN_ID",
 			Name:   "softlayer-private-vlan-id",
 			Usage:  "",
+			Value:  0,
 		},
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 
 	"github.com/docker/machine/commands"
 	"github.com/docker/machine/commands/mcndirs"
@@ -78,6 +78,10 @@ func main() {
 		if c.GlobalBool("native-ssh") {
 			ssh.SetDefaultClient(ssh.Native)
 		}
+		return nil
+	}
+	app.After = func(c *cli.Context) error {
+		commands.ClosePluginServers()
 		return nil
 	}
 	app.Commands = commands.Commands

@@ -10,9 +10,9 @@ import (
 	azure "github.com/MSOpenTech/azure-sdk-for-go"
 	"github.com/MSOpenTech/azure-sdk-for-go/clients/vmClient"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
@@ -31,15 +31,6 @@ type Driver struct {
 	DockerSwarmMasterPort   int
 }
 
-const (
-	defaultDockerPort      = 2376
-	defaultSwarmMasterPort = 3376
-	defaultLocation        = "West US"
-	defaultSize            = "Small"
-	defaultSSHPort         = 22
-	defaultSSHUsername     = "ubuntu"
-)
-
 func init() {
 	drivers.Register("azure", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -48,82 +39,76 @@ func init() {
 
 // GetCreateFlags registers the flags this d adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.IntFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			Name:  "azure-docker-port",
 			Usage: "Azure Docker port",
-			Value: defaultDockerPort,
+			Value: 2376,
 		},
-		cli.IntFlag{
+		{
 			Name:  "azure-docker-swarm-master-port",
 			Usage: "Azure Docker Swarm master port",
-			Value: defaultSwarmMasterPort,
+			Value: 3376,
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_IMAGE",
 			Name:   "azure-image",
 			Usage:  "Azure image name. Default is Ubuntu 14.04 LTS x64",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_LOCATION",
 			Name:   "azure-location",
 			Usage:  "Azure location",
-			Value:  defaultLocation,
+			Value:  "West US",
 		},
-		cli.StringFlag{
+		{
 			Name:  "azure-password",
 			Usage: "Azure user password",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_PUBLISH_SETTINGS_FILE",
 			Name:   "azure-publish-settings-file",
 			Usage:  "Azure publish settings file",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_SIZE",
 			Name:   "azure-size",
 			Usage:  "Azure size",
-			Value:  defaultSize,
+			Value:  "Small",
 		},
-		cli.IntFlag{
+		{
 			Name:  "azure-ssh-port",
 			Usage: "Azure SSH port",
-			Value: defaultSSHPort,
+			Value: 22,
 		},
 
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_SUBSCRIPTION_CERT",
 			Name:   "azure-subscription-cert",
 			Usage:  "Azure subscription cert",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "AZURE_SUBSCRIPTION_ID",
 			Name:   "azure-subscription-id",
 			Usage:  "Azure subscription ID",
 		},
-		cli.StringFlag{
+		{
 			Name:  "azure-username",
 			Usage: "Azure username",
-			Value: defaultSSHUsername,
+			Value: "ubuntu",
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	d := &Driver{
-		DockerPort:            defaultDockerPort,
-		DockerSwarmMasterPort: defaultSwarmMasterPort,
-		Location:              defaultLocation,
-		Size:                  defaultSize,
 		BaseDriver: &drivers.BaseDriver{
-			SSHPort:      defaultSSHPort,
-			SSHUser:      defaultSSHUsername,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
 	}
-	return d
+	return d, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

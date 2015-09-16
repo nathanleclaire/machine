@@ -7,7 +7,7 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/state"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 )
 
 func cmdSsh(c *cli.Context) {
@@ -20,7 +20,7 @@ func cmdSsh(c *cli.Context) {
 	}
 
 	store := getStore(c)
-	host, err := store.Load(name)
+	host, err := loadHost(store, name)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 	"github.com/docker/machine/libmachine/host"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/persist"
@@ -39,7 +39,7 @@ func getInfoForScpArg(hostAndPath string, store persist.Store) (*host.Host, stri
 	// Remote path.  e.g. "machinename:/usr/bin/cmatrix"
 	if len(splitInfo) == 2 {
 		path := splitInfo[1]
-		host, err := store.Load(splitInfo[0])
+		host, err := loadHost(store, splitInfo[0])
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("Error loading host: %s", err)
 		}

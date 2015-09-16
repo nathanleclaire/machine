@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/state"
 )
@@ -20,13 +20,7 @@ type Driver struct {
 }
 
 const (
-	defaultSSHUser = "root"
-	defaultSSHPort = 22
 	defaultTimeout = 1 * time.Second
-)
-
-var (
-	defaultSSHKey = filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa")
 )
 
 func init() {
@@ -37,40 +31,38 @@ func init() {
 
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			Name:  "generic-ip-address",
 			Usage: "IP Address of machine",
+			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "generic-ssh-user",
 			Usage: "SSH user",
-			Value: defaultSSHUser,
+			Value: "root",
 		},
-		cli.StringFlag{
+		{
 			Name:  "generic-ssh-key",
 			Usage: "SSH private key path",
-			Value: defaultSSHKey,
+			Value: filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa"),
 		},
-		cli.IntFlag{
+		{
 			Name:  "generic-ssh-port",
 			Usage: "SSH port",
-			Value: defaultSSHPort,
+			Value: 22,
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
-		SSHKey: defaultSSHKey,
 		BaseDriver: &drivers.BaseDriver{
-			SSHUser:      defaultSSHUser,
-			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) DriverName() string {

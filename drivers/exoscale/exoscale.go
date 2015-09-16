@@ -8,9 +8,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/pyr/egoscale/src/egoscale"
@@ -31,13 +31,6 @@ type Driver struct {
 	Id               string
 }
 
-const (
-	defaultInstanceProfile  = "small"
-	defaultDiskSize         = 50
-	defaultImage            = "ubuntu-14.04"
-	defaultAvailabilityZone = "ch-gva-2"
-)
-
 func init() {
 	drivers.Register("exoscale", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
@@ -46,67 +39,63 @@ func init() {
 
 // RegisterCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			EnvVar: "EXOSCALE_ENDPOINT",
 			Name:   "exoscale-url",
 			Usage:  "exoscale API endpoint",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "EXOSCALE_API_KEY",
 			Name:   "exoscale-api-key",
 			Usage:  "exoscale API key",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "EXOSCALE_API_SECRET",
 			Name:   "exoscale-api-secret-key",
 			Usage:  "exoscale API secret key",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "EXOSCALE_INSTANCE_PROFILE",
 			Name:   "exoscale-instance-profile",
-			Value:  defaultInstanceProfile,
+			Value:  "small",
 			Usage:  "exoscale instance profile (small, medium, large, ...)",
 		},
-		cli.IntFlag{
+		{
 			EnvVar: "EXOSCALE_DISK_SIZE",
 			Name:   "exoscale-disk-size",
-			Value:  defaultDiskSize,
+			Value:  50,
 			Usage:  "exoscale disk size (10, 50, 100, 200, 400)",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "EXSOCALE_IMAGE",
 			Name:   "exoscale-image",
-			Value:  defaultImage,
+			Value:  "ubuntu-14.04",
 			Usage:  "exoscale image template",
 		},
-		cli.StringSliceFlag{
+		{
 			EnvVar: "EXOSCALE_SECURITY_GROUP",
 			Name:   "exoscale-security-group",
-			Value:  &cli.StringSlice{},
+			Value:  []string{},
 			Usage:  "exoscale security group",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "EXOSCALE_AVAILABILITY_ZONE",
 			Name:   "exoscale-availability-zone",
-			Value:  defaultAvailabilityZone,
+			Value:  "ch-gva-2",
 			Usage:  "exoscale availibility zone",
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return &Driver{
-		InstanceProfile:  defaultInstanceProfile,
-		DiskSize:         defaultDiskSize,
-		Image:            defaultImage,
-		AvailabilityZone: defaultAvailabilityZone,
 		BaseDriver: &drivers.BaseDriver{
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/docker/machine/libmachine/log"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 )
 
 func cmdUrl(c *cli.Context) {

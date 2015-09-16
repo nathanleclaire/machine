@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
@@ -17,7 +17,6 @@ import (
 type Driver struct {
 	*drivers.BaseDriver
 	AuthUrl          string
-	ActiveTimeout    int
 	Insecure         bool
 	DomainID         string
 	DomainName       string
@@ -42,157 +41,143 @@ type Driver struct {
 	client           Client
 }
 
-const (
-	defaultSSHUser       = "root"
-	defaultSSHPort       = 22
-	defaultActiveTimeout = 200
-)
-
 func init() {
 	drivers.Register("openstack", &drivers.RegisteredDriver{
 		GetCreateFlags: GetCreateFlags,
 	})
 }
 
-func GetCreateFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
+func GetCreateFlags() []mcnflag.Flag {
+	return []mcnflag.Flag{
+		{
 			EnvVar: "OS_AUTH_URL",
 			Name:   "openstack-auth-url",
 			Usage:  "OpenStack authentication URL",
 			Value:  "",
 		},
-		cli.BoolFlag{
+		{
 			Name:  "openstack-insecure",
 			Usage: "Disable TLS credential checking.",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_DOMAIN_ID",
 			Name:   "openstack-domain-id",
 			Usage:  "OpenStack domain ID (identity v3 only)",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_DOMAIN_NAME",
 			Name:   "openstack-domain-name",
 			Usage:  "OpenStack domain name (identity v3 only)",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_USERNAME",
 			Name:   "openstack-username",
 			Usage:  "OpenStack username",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_PASSWORD",
 			Name:   "openstack-password",
 			Usage:  "OpenStack password",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_TENANT_NAME",
 			Name:   "openstack-tenant-name",
 			Usage:  "OpenStack tenant name",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_TENANT_ID",
 			Name:   "openstack-tenant-id",
 			Usage:  "OpenStack tenant id",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_REGION_NAME",
 			Name:   "openstack-region",
 			Usage:  "OpenStack region name",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_AVAILABILITY_ZONE",
 			Name:   "openstack-availability-zone",
 			Usage:  "OpenStack availability zone",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			EnvVar: "OS_ENDPOINT_TYPE",
 			Name:   "openstack-endpoint-type",
 			Usage:  "OpenStack endpoint type (adminURL, internalURL or publicURL)",
 			Value:  "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-flavor-id",
 			Usage: "OpenStack flavor id to use for the instance",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-flavor-name",
 			Usage: "OpenStack flavor name to use for the instance",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-image-id",
 			Usage: "OpenStack image id to use for the instance",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-image-name",
 			Usage: "OpenStack image name to use for the instance",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-net-id",
 			Usage: "OpenStack network id the machine will be connected on",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-net-name",
 			Usage: "OpenStack network name the machine will be connected on",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-sec-groups",
 			Usage: "OpenStack comma separated security groups for the machine",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-floatingip-pool",
 			Usage: "OpenStack floating IP pool to get an IP from to assign to the instance",
 			Value: "",
 		},
-		cli.StringFlag{
+		{
 			Name:  "openstack-ssh-user",
 			Usage: "OpenStack SSH user",
-			Value: defaultSSHUser,
+			Value: "root",
 		},
-		cli.IntFlag{
+		{
 			Name:  "openstack-ssh-port",
 			Usage: "OpenStack SSH port",
-			Value: defaultSSHPort,
-		},
-		cli.IntFlag{
-			Name:  "openstack-active-timeout",
-			Usage: "OpenStack active timeout",
-			Value: defaultActiveTimeout,
+			Value: 22,
 		},
 	}
 }
 
-func NewDriver(hostName, artifactPath string) drivers.Driver {
+func NewDriver(hostName, artifactPath string) (drivers.Driver, error) {
 	return NewDerivedDriver(hostName, artifactPath)
 }
 
-func NewDerivedDriver(hostName, artifactPath string) *Driver {
+func NewDerivedDriver(hostName, artifactPath string) (*Driver, error) {
 	return &Driver{
-		client:        &GenericClient{},
-		ActiveTimeout: defaultActiveTimeout,
+		client: &GenericClient{},
 		BaseDriver: &drivers.BaseDriver{
-			SSHUser:      defaultSSHUser,
-			SSHPort:      defaultSSHPort,
 			MachineName:  hostName,
 			ArtifactPath: artifactPath,
 		},
-	}
+	}, nil
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
@@ -205,7 +190,6 @@ func (d *Driver) DriverName() string {
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.AuthUrl = flags.String("openstack-auth-url")
-	d.ActiveTimeout = flags.Int("openstack-active-timeout")
 	d.Insecure = flags.Bool("openstack-insecure")
 	d.DomainID = flags.String("openstack-domain-id")
 	d.DomainName = flags.String("openstack-domain-name")

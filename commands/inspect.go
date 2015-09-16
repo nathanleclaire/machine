@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/machine/libmachine/log"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 )
 
 var funcMap = template.FuncMap{

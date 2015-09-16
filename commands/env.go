@@ -6,7 +6,7 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/codegangsta/cli"
+	"github.com/docker/machine/cli"
 	"github.com/docker/machine/libmachine/log"
 )
 
