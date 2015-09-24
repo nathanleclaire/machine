@@ -29,15 +29,9 @@ var (
 	defaultSSHKey = filepath.Join(mcnutils.GetHomeDir(), ".ssh", "id_rsa")
 )
 
-func init() {
-	drivers.Register("generic", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			Name:  "generic-ip-address",

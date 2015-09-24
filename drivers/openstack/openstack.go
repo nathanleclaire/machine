@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnflag"
@@ -50,13 +49,7 @@ const (
 	defaultActiveTimeout = 200
 )
 
-func init() {
-	drivers.Register("openstack", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			EnvVar: "OS_AUTH_URL",
@@ -178,7 +171,7 @@ func GetCreateFlags() []mcnflag.Flag {
 			Usage: "OpenStack SSH port",
 			Value: defaultSSHPort,
 		},
-		cli.IntFlag{
+		{
 			Name:  "openstack-active-timeout",
 			Usage: "OpenStack active timeout",
 			Value: defaultActiveTimeout,

@@ -45,15 +45,9 @@ const (
 	defaultDockerPort  = 2376
 )
 
-func init() {
-	drivers.Register("vmwarevcloudair", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			EnvVar: "VCLOUDAIR_USERNAME",

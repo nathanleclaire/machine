@@ -3,10 +3,10 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/docker/machine/cli"
+	"github.com/docker/machine/libmachine/log"
 	"os"
 	"text/template"
-
-	"github.com/docker/machine/cli"
 )
 
 var funcMap = template.FuncMap{

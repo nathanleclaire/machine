@@ -31,12 +31,6 @@ const (
 	defaultMemory   = 1024
 )
 
-func init() {
-	drivers.Register("hyper-v", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 func NewDriver(hostName, storePath string) drivers.Driver {
 	return &Driver{
 		DiskSize: defaultDiskSize,
@@ -50,7 +44,7 @@ func NewDriver(hostName, storePath string) drivers.Driver {
 
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			Name:  "hyper-v-boot2docker-url",
