@@ -51,12 +51,6 @@ const (
 	defaultPrivateVLANIP = 0
 )
 
-func init() {
-	drivers.Register("softlayer", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 func NewDriver(hostName, storePath string) drivers.Driver {
 	return &Driver{
 		Client: &Client{
@@ -83,7 +77,7 @@ func (d *Driver) GetSSHHostname() (string, error) {
 	return d.GetIP()
 }
 
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	// Set hourly billing to true by default since codegangsta cli doesn't take default bool values
 	if os.Getenv("SOFTLAYER_HOURLY_BILLING") == "" {
 		os.Setenv("SOFTLAYER_HOURLY_BILLING", "true")

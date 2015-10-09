@@ -40,15 +40,9 @@ const (
 	defaultSSHUsername     = "ubuntu"
 )
 
-func init() {
-	drivers.Register("azure", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the flags this d adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			Name:  "azure-docker-port",

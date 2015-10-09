@@ -53,15 +53,9 @@ const (
 	defaultDiskSize = 20000
 )
 
-func init() {
-	drivers.Register("vmwarevsphere", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			EnvVar: "VSPHERE_CPU_COUNT",

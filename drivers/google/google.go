@@ -35,15 +35,9 @@ const (
 	defaultDiskSize    = 10
 )
 
-func init() {
-	drivers.Register("google", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			Name:   "google-zone",
@@ -66,6 +60,7 @@ func GetCreateFlags() []mcnflag.Flag {
 		{
 			Name:   "google-project",
 			Usage:  "GCE Project",
+			Value:  "",
 			EnvVar: "GOOGLE_PROJECT",
 		},
 		{
@@ -101,10 +96,11 @@ func GetCreateFlags() []mcnflag.Flag {
 			Usage:  "GCE Instance Preemptibility",
 			EnvVar: "GOOGLE_PREEMPTIBLE",
 		},
-		cli.StringFlag{
+		{
 			Name:   "google-tags",
 			Usage:  "GCE Instance Tags (comma-separated)",
 			EnvVar: "GOOGLE_TAGS",
+			Value:  "",
 		},
 	}
 }

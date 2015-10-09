@@ -24,15 +24,9 @@ const (
 	defaultDockerInstall = "true"
 )
 
-func init() {
-	drivers.Register("rackspace", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // GetCreateFlags registers the "machine create" flags recognized by this driver, including
 // their help text and defaults.
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			EnvVar: "OS_USERNAME",

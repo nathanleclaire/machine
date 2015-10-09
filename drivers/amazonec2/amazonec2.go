@@ -68,13 +68,7 @@ type Driver struct {
 	Monitoring          bool
 }
 
-func init() {
-	drivers.Register(driverName, &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			Name:   "amazonec2-access-key",

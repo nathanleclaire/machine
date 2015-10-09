@@ -38,15 +38,9 @@ const (
 	defaultAvailabilityZone = "ch-gva-2"
 )
 
-func init() {
-	drivers.Register("exoscale", &drivers.RegisteredDriver{
-		GetCreateFlags: GetCreateFlags,
-	})
-}
-
 // RegisterCreateFlags registers the flags this driver adds to
 // "docker hosts create"
-func GetCreateFlags() []mcnflag.Flag {
+func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		{
 			EnvVar: "EXOSCALE_ENDPOINT",
