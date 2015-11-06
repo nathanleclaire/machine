@@ -70,7 +70,7 @@ func newPluginDriver(driverName string, rawContent []byte) (drivers.Driver, erro
 	}
 
 	if driverName == "virtualbox" {
-		return drivers.SynchronizeGlobal(d), nil
+		return drivers.NewSerialDriver(d), nil
 	}
 
 	return d, nil

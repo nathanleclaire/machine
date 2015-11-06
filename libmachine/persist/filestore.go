@@ -34,6 +34,10 @@ func (s Filestore) saveToFile(data []byte, file string) error {
 }
 
 func (s Filestore) Save(host *host.Host) error {
+	if serialDriver, ok := host.Driver.(*drivers.SerialDriver); ok {
+		host.Driver = serialDriver.Driver
+	}
+
 	// TODO: Does this belong here?
 	if rpcClientDriver, ok := host.Driver.(*rpcdriver.RpcClientDriver); ok {
 		data, err := rpcClientDriver.GetConfigRaw()

@@ -132,164 +132,164 @@ func (d *MockDriver) Stop() error {
 	return nil
 }
 
-func TestSynchronizedDriverDecoratorCreate(t *testing.T) {
+func TestSerialDriverCreate(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	err := driver.Create()
 
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"Lock", "Create", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorDriverName(t *testing.T) {
+func TestSerialDriverDriverName(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{driverName: "DRIVER", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{driverName: "DRIVER", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driverName := driver.DriverName()
 
 	assert.Equal(t, "DRIVER", driverName)
 	assert.Equal(t, []string{"Lock", "DriverName", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetIP(t *testing.T) {
+func TestSerialDriverGetIP(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{ip: "IP", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{ip: "IP", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	ip, _ := driver.GetIP()
 
 	assert.Equal(t, "IP", ip)
 	assert.Equal(t, []string{"Lock", "GetIP", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetMachineName(t *testing.T) {
+func TestSerialDriverGetMachineName(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{machineName: "MACHINE_NAME", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{machineName: "MACHINE_NAME", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	machineName := driver.GetMachineName()
 
 	assert.Equal(t, "MACHINE_NAME", machineName)
 	assert.Equal(t, []string{"Lock", "GetMachineName", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetSSHHostname(t *testing.T) {
+func TestSerialDriverGetSSHHostname(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{sshHostname: "SSH_HOSTNAME", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{sshHostname: "SSH_HOSTNAME", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	sshHostname, _ := driver.GetSSHHostname()
 
 	assert.Equal(t, "SSH_HOSTNAME", sshHostname)
 	assert.Equal(t, []string{"Lock", "GetSSHHostname", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetSSHKeyPath(t *testing.T) {
+func TestSerialDriverGetSSHKeyPath(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{sshKeyPath: "PATH", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{sshKeyPath: "PATH", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	path := driver.GetSSHKeyPath()
 
 	assert.Equal(t, "PATH", path)
 	assert.Equal(t, []string{"Lock", "GetSSHKeyPath", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetSSHPort(t *testing.T) {
+func TestSerialDriverGetSSHPort(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{sshPort: 42, calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{sshPort: 42, calls: callRecorder}, &MockLocker{calls: callRecorder})
 	sshPort, _ := driver.GetSSHPort()
 
 	assert.Equal(t, 42, sshPort)
 	assert.Equal(t, []string{"Lock", "GetSSHPort", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetSSHUsername(t *testing.T) {
+func TestSerialDriverGetSSHUsername(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{sshUsername: "SSH_USER", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{sshUsername: "SSH_USER", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	sshUsername := driver.GetSSHUsername()
 
 	assert.Equal(t, "SSH_USER", sshUsername)
 	assert.Equal(t, []string{"Lock", "GetSSHUsername", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetURL(t *testing.T) {
+func TestSerialDriverGetURL(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{url: "URL", calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{url: "URL", calls: callRecorder}, &MockLocker{calls: callRecorder})
 	url, _ := driver.GetURL()
 
 	assert.Equal(t, "URL", url)
 	assert.Equal(t, []string{"Lock", "GetURL", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorGetState(t *testing.T) {
+func TestSerialDriverGetState(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{state: state.Running, calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{state: state.Running, calls: callRecorder}, &MockLocker{calls: callRecorder})
 	machineState, _ := driver.GetState()
 
 	assert.Equal(t, state.Running, machineState)
 	assert.Equal(t, []string{"Lock", "GetState", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorKill(t *testing.T) {
+func TestSerialDriverKill(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.Kill()
 
 	assert.Equal(t, []string{"Lock", "Kill", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorPreCreateCheck(t *testing.T) {
+func TestSerialDriverPreCreateCheck(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.PreCreateCheck()
 
 	assert.Equal(t, []string{"Lock", "PreCreateCheck", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorRemove(t *testing.T) {
+func TestSerialDriverRemove(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.Remove()
 
 	assert.Equal(t, []string{"Lock", "Remove", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorRestart(t *testing.T) {
+func TestSerialDriverRestart(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.Restart()
 
 	assert.Equal(t, []string{"Lock", "Restart", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorSetConfigFromFlags(t *testing.T) {
+func TestSerialDriverSetConfigFromFlags(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.SetConfigFromFlags(nil)
 
 	assert.Equal(t, []string{"Lock", "SetConfigFromFlags", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorStart(t *testing.T) {
+func TestSerialDriverStart(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.Start()
 
 	assert.Equal(t, []string{"Lock", "Start", "Unlock"}, callRecorder.calls)
 }
 
-func TestSynchronizedDriverDecoratorStop(t *testing.T) {
+func TestSerialDriverStop(t *testing.T) {
 	callRecorder := &CallRecorder{}
 
-	driver := SynchronizeOnLock(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
+	driver := NewSerialDriver(&MockDriver{calls: callRecorder}, &MockLocker{calls: callRecorder})
 	driver.Stop()
 
 	assert.Equal(t, []string{"Lock", "Stop", "Unlock"}, callRecorder.calls)
