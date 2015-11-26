@@ -22,7 +22,7 @@ import (
 type API interface {
 	persist.Store
 	persist.PluginDriverFactory
-	NewHost(drivers.Driver) (*host.Host, error)
+	NewHost(drivers.Driver) *host.Host
 	Create(h *host.Host) error
 }
 
@@ -42,8 +42,9 @@ func NewClient(storePath string) *Client {
 	}
 }
 
-func (api *Client) NewHost(driver drivers.Driver) (*host.Host, error) {
+func (api *Client) NewHost(driver drivers.Driver) *host.Host {
 	certDir := filepath.Join(api.Path, "certs")
+	mcnName := driver.GetMachineName()
 
 	hostOptions := &host.Options{
 		AuthOptions: &auth.Options{
@@ -52,8 +53,8 @@ func (api *Client) NewHost(driver drivers.Driver) (*host.Host, error) {
 			CaPrivateKeyPath: filepath.Join(certDir, "ca-key.pem"),
 			ClientCertPath:   filepath.Join(certDir, "cert.pem"),
 			ClientKeyPath:    filepath.Join(certDir, "key.pem"),
-			ServerCertPath:   filepath.Join(api.GetMachinesDir(), "server.pem"),
-			ServerKeyPath:    filepath.Join(api.GetMachinesDir(), "server-key.pem"),
+			ServerCertPath:   filepath.Join(api.GetMachinesDir(), mcnName, "server.pem"),
+			ServerKeyPath:    filepath.Join(api.GetMachinesDir(), mcnName, "server-key.pem"),
 		},
 		EngineOptions: &engine.Options{
 			InstallURL:    "https://get.docker.com",
@@ -69,11 +70,11 @@ func (api *Client) NewHost(driver drivers.Driver) (*host.Host, error) {
 
 	return &host.Host{
 		ConfigVersion: version.ConfigVersion,
-		Name:          driver.GetMachineName(),
+		Name:          mcnName,
 		Driver:        driver,
 		DriverName:    driver.DriverName(),
 		HostOptions:   hostOptions,
-	}, nil
+	}
 }
 
 // Create is the wrapper method which covers all of the boilerplate around

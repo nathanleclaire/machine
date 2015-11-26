@@ -158,11 +158,7 @@ func cmdCreateInner(c CommandLine, api libmachine.API) error {
 		return fmt.Errorf("Error loading driver %q: %s", driverName, err)
 	}
 
-	h, err := api.NewHost(driver)
-	if err != nil {
-		return fmt.Errorf("Error getting new host: %s", err)
-	}
-
+	h := api.NewHost(driver)
 	certInfo := getCertPathInfoFromCommandLine(c)
 
 	h.HostOptions = &host.Options{

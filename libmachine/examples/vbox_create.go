@@ -35,10 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	h, err := client.NewHost(pluginDriver)
-	if err != nil {
-		log.Fatal(err)
-	}
+	h := client.NewHost(pluginDriver)
 
 	h.HostOptions.EngineOptions.StorageDriver = "overlay"
 

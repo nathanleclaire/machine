@@ -389,6 +389,7 @@ func getCertPathInfoFromCommandLine(c CommandLine) cert.PathInfo {
 	}
 
 	if clientKeyPath == "" {
+		// TODO: This should point towards the machine dir, not certs.
 		clientKeyPath = filepath.Join(mcndirs.GetMachineCertDir(), "key.pem")
 	}
 
