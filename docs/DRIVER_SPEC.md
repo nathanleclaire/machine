@@ -9,48 +9,91 @@ parent="mn_install"
 +++
 <![end-metadata]-->
 
-# Machine Driver Specification v1
+# Machine Driver Specification V1
 
-This is the standard configuration and specification for version 1 drivers.
+This document details the specification that all drivers, core and plugin, are
+expected to conform to.
 
-Along with defining how a driver should provision instances, the standard
-also discusses behavior and operations Machine expects.
+# State of Created Machines
 
-# Requirements
+Machine is designed to be opinionated about the role that each of the plugin
+method calls should play and the state of the rendered machine should be in,
+say, a `Create` call.
 
-The following are required for a driver to be included as a supported driver
-for Docker Machine.
+### Networking
 
-## Base Operating System
+### Provisioning
 
-The provider must offer a base operating system supported by the Docker Engine.
 
-Currently Machine requires Ubuntu for non-Boot2Docker machines.  This will
-change in the future.
+
+### Base Operating System
+
+In the case of local virtualization providers (e.g. VirtualBox), the default
+operating system of the created instance must be
+[boot2docker](https://github.com/boot2docker/boot2docker).
+
+In the case of cloud virtualization or bare metal servers, the default operating
+system must be Ubuntu Linux (currently 15.10 is the recommended version).
 
 ## API Access
 
 We prefer accessing the provider service via HTTP APIs and strongly recommend
-using those over external executables.  For example, using the Amazon EC2 API
-instead of the EC2 command line tools.  If in doubt, contact a project
+using those over shelling out to external executables.  For example, directly
+accessing the AWS API is favored over `aws-cli` (and, indeed, this is how the
+core `amazonec2` plugin is implemented.  If in doubt, contact a project
 maintainer.
 
 ## SSH
 
-The provider must offer SSH access to control the instance.  This does not
-have to be public, but must offer it as Machine relies on SSH for system
-level maintenance.
+The provider _must_ offer SSH access to control the instance and perform
+provisioning.  This does not have to be public, but must be offered as Machine
+relies on SSH for system level maintenance.
 
-# Provider Operations
+# Methods
 
-The following instance operations should be supported by the provider.
+In order to create a driver, the `Driver` interface must be fulfilled by the
+plugin:
+
+```golang
+type Driver interface {
+	Create() error
+	DriverName() string
+	GetCreateFlags() []mcnflag.Flag
+	GetIP() (string, error)
+	GetMachineName() string
+	GetSSHHostname() (string, error)
+	GetSSHKeyPath() string
+	GetSSHPort() (int, error)
+	GetSSHUsername() string
+	GetURL() (string, error)
+	GetState() (state.State, error)
+	Kill() error
+	PreCreateCheck() error
+	Remove() error
+	Restart() error
+	SetConfigFromFlags(opts DriverOptions) error
+	Start() error
+	Stop() error
+}
+```
+
+This specification defines a narrow scope for what each of these methods is
+intended to accomplish.  If the driver implements additional 
 
 ## Create
 
+`Create` should:
+
+- 
+
 `Create` will launch a new instance and make sure it is ready for provisioning.
-This includes setting up the instance with the proper SSH keys and making
-sure SSH is available including any access control (firewall).  This should
-return an error on failure.
+This includes setting up the instance with the proper SSH keys and making sure
+SSH is available including any access control (firewall).  This should return an
+error on failure.
+
+## DriverName
+
+This method returns the name of the driver, e.g. `virtualbox`.
 
 ## Remove
 
