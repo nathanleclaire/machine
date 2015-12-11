@@ -105,7 +105,7 @@ func configureSwarm(p Provisioner, swarmOptions swarm.Options, authOptions auth.
 		HostConfig: workerHostConfig,
 	}
 
-	if err = CreateContainer(dockerClient, swarmWorkerConfig, "swarm-agent"); err != nil {
+	if err := CreateContainer(dockerClient, swarmWorkerConfig, "swarm-agent"); err != nil {
 		return err
 	}
 
