@@ -175,6 +175,15 @@ func (h *Host) Upgrade() error {
 }
 
 func (h *Host) URL() (string, error) {
+	machineState, err := h.Driver.GetState()
+	if err != nil {
+		return "", err
+	}
+
+	if machineState != state.Running {
+		return "", drivers.ErrHostIsNotRunning
+	}
+
 	return h.Driver.GetURL()
 }
 
